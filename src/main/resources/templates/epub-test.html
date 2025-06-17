@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>EPUB Structure Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .upload-section {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .results {
+            margin-top: 20px;
+        }
+        
+        .chapter {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+        }
+        
+        .chapter-title {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .paragraph-sample {
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-left: 3px solid #2c5aa0;
+        }
+        
+        .chunk-sample {
+            margin: 10px 0;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .chunk-metadata {
+            background: #f0f0f0;
+            padding: 5px;
+            margin-bottom: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .percentage-indicator {
+            display: inline-block;
+            background: #2c5aa0;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+        
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>EPUB Structure Parser Test</h1>
+    
+    <div class="upload-section">
+        <h2>Upload EPUB File</h2>
+        <input type="file" id="epubFile" accept=".epub">
+        <button onclick="parseEPUB()">Parse Structure</button>
+    </div>
+    
+    <div class="upload-section">
+        <h2>Or Test with Local Path</h2>
+        <input type="text" id="localPath" placeholder="/path/to/file.epub" style="width: 400px;">
+        <button onclick="parseLocal()">Parse Local File</button>
+    </div>
+    
+    <div class="upload-section" style="background-color: #e8f4f8;">
+        <h2>Test Chapter Percentage Calculation</h2>
+        <p>Upload an EPUB to test the new chapter-aware chunking with percentage positions</p>
+        <input type="file" id="percentageTestFile" accept=".epub">
+        <button onclick="testChapterPercentage()">Test Chapter Percentages</button>
+    </div>
+    
+    <div id="results" class="results"></div>
+    
+    <script>
+        function parseEPUB() {
+            const fileInput = document.getElementById('epubFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an EPUB file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/test/epub/parse-structure', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => displayResults(data))
+            .catch(error => {
+                document.getElementById('results').innerHTML = 
+                    '<div class="error">Error: ' + error + '</div>';
+            });
+        }
+        
+        function parseLocal() {
+            const path = document.getElementById('localPath').value;
+            
+            if (!path) {
+                alert('Please enter a file path');
+                return;
+            }
+            
+            fetch('/api/test/epub/parse-local?path=' + encodeURIComponent(path))
+                .then(response => response.json())
+                .then(data => displayResults(data))
+                .catch(error => {
+                    document.getElementById('results').innerHTML = 
+                        '<div class="error">Error: ' + error + '</div>';
+                });
+        }
+        
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!data.success) {
+                resultsDiv.innerHTML = '<div class="error">Error: ' + data.error + '</div>';
+                return;
+            }
+            
+            let html = '<h2>Parsing Results</h2>';
+            html += '<p>Total Chapters Found: ' + data.totalChapters + '</p>';
+            
+            if (data.filePath) {
+                html += '<p>File: ' + data.filePath + '</p>';
+            }
+            
+            html += '<h3>Chapter Structure:</h3>';
+            
+            data.chapters.forEach(chapter => {
+                html += '<div class="chapter">';
+                html += '<div class="chapter-title">Chapter ' + chapter.number + ': ' + chapter.title + '</div>';
+                html += '<div>File: ' + chapter.fileName + '</div>';
+                html += '<div>Text Length: ' + chapter.textLength + ' characters</div>';
+                
+                if (chapter.textPreview) {
+                    html += '<div>Text preview:</div>';
+                    html += '<div class="paragraph-sample">' + chapter.textPreview + '</div>';
+                }
+                
+                html += '</div>';
+            });
+            
+            html += '<h3>Raw JSON Response:</h3>';
+            html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function testChapterPercentage() {
+            const fileInput = document.getElementById('percentageTestFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an EPUB file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('results').innerHTML = '<p>Processing EPUB file...</p>';
+            
+            fetch('/api/test/epub/test-chapter-percentage-upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => displayPercentageResults(data))
+            .catch(error => {
+                document.getElementById('results').innerHTML = 
+                    '<div class="error">Error: ' + error + '</div>';
+            });
+        }
+        
+        function displayPercentageResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!data.success) {
+                resultsDiv.innerHTML = '<div class="error">Error: ' + data.error + '</div>';
+                return;
+            }
+            
+            let html = '<h2>Chapter Percentage Test Results</h2>';
+            html += '<p><strong>Total Chapters:</strong> ' + data.totalChapters + '</p>';
+            html += '<p><strong>Total Chunks Created:</strong> ' + data.totalChunks + '</p>';
+            
+            html += '<h3>Sample Chunks with Chapter Data:</h3>';
+            
+            if (data.sampleChunks) {
+                data.sampleChunks.forEach(chunk => {
+                    html += '<div class="chunk-sample">';
+                    html += '<div class="chunk-metadata">';
+                    html += 'Chunk #' + chunk.index;
+                    html += ' | Chapter: ' + (chunk.chapter || 'N/A');
+                    html += ' | Chapter #' + (chunk.chapterNumber || 'N/A');
+                    html += ' | Position: ' + (chunk.chapterPosition || 0) + ' ';
+                    html += '<span class="percentage-indicator">' + (chunk.chapterPercentage || 0) + '%</span>';
+                    html += '</div>';
+                    html += '<div class="content-preview">' + (chunk.contentPreview || '') + '</div>';
+                    html += '</div>';
+                });
+            }
+            
+            html += '<h3>Raw Response:</h3>';
+            html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            
+            resultsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

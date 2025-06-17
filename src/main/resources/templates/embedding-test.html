@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedding Test - Bungaku Kensaku</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+        }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        button {
+            background: #2c5aa0;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1e3f73;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .error {
+            background: #ffe6e6;
+            color: #d00;
+        }
+        .success {
+            background: #e6ffe6;
+        }
+        .info {
+            background: #e6f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Embedding Generation Test</h1>
+        
+        <div class="info">
+            <strong>Note:</strong> Make sure you've set your OpenAI API key in application.properties or as an environment variable (OPENAI_API_KEY).
+        </div>
+        
+        <h3>Enter text to generate embeddings:</h3>
+        <textarea id="textInput" placeholder="Enter Japanese or English text here...">青年時代は、人生の土台を築く最も重要な時期です。</textarea>
+        
+        <button onclick="generateEmbedding()">Generate Embedding</button>
+        
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function generateEmbedding() {
+            const text = document.getElementById('textInput').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!text.trim()) {
+                alert('Please enter some text');
+                return;
+            }
+            
+            resultDiv.style.display = 'block';
+            resultDiv.className = '';
+            resultDiv.textContent = 'Generating embedding...';
+            
+            try {
+                const response = await fetch('/api/test/embedding', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'success';
+                    resultDiv.textContent = `✅ Success!\n\nText: ${data.text}\nDimension: ${data.dimension}\nEmbedding Preview: ${data.embedding_preview}`;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.textContent = `❌ Error: ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

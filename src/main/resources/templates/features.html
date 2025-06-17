@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技術仕様 - 池田先生指導検索システム</title>
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+    <style>
+        .tech-specs-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+        
+        .tech-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #2c5aa0;
+        }
+        
+        .tech-section h2 {
+            color: #2c5aa0;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            border-bottom: 2px solid #e3e7ed;
+            padding-bottom: 0.5rem;
+        }
+        
+        .tech-section h3 {
+            color: #34495e;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        
+        .tech-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e3e7ed;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .tech-card h4 {
+            color: #2c5aa0;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .tech-stack-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .tech-stack-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .tech-stack-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .tech-badge {
+            background: #2c5aa0;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .architecture-diagram {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 2px solid #2c5aa0;
+            margin: 2rem 0;
+            text-align: center;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            line-height: 2;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #2c5aa0, #3498db);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .metric-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .back-nav {
+            margin-bottom: 2rem;
+        }
+        
+        .back-nav a {
+            color: #2c5aa0;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .back-nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">先生指導検索</div>
+            <ul class="nav-links">
+                <li><a href="/">ホーム</a></li>
+                <li><a href="/overview">概要</a></li>
+                <li><a href="/features" class="active">機能</a></li>
+                <li><a href="/contact">お問い合わせ</a></li>
+                <li>
+                    <form method="post" action="/logout" style="display: inline;">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <button type="submit" class="logout-link" style="border: none; background: none; font: inherit; cursor: pointer;">ログアウト</button>
+                    </form>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="tech-specs-container">
+        <div class="back-nav">
+            <a href="/">&larr; ホームに戻る</a>
+        </div>
+        
+        <h1 style="color: #2c5aa0; text-align: center; margin-bottom: 3rem;">技術仕様書</h1>
+        
+        <!-- System Architecture -->
+        <div class="tech-section">
+            <h2>🏗️ システムアーキテクチャ</h2>
+            <div class="architecture-diagram">
+                <strong>ハイブリッド Java + Python アーキテクチャ</strong><br/><br/>
+                Frontend (Thymeleaf) ↔ Spring Boot (Java)<br/>
+                ↓<br/>
+                PostgreSQL Database ← → Python AI Service (FastAPI)<br/>
+                ↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+                Pinecone Vector DB ← → OpenAI API<br/><br/>
+                <strong>Deployment Target: AWS EC2</strong>
+            </div>
+            
+            <p>本システムは、Java Spring Bootを核とした安定性と、Python AIサービスによる高度な言語処理能力を組み合わせたハイブリッドアーキテクチャを採用しています。</p>
+        </div>
+
+        <!-- Technology Stack -->
+        <div class="tech-section">
+            <h2>⚙️ 技術スタック</h2>
+            
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4>バックエンド</h4>
+                    <ul class="tech-stack-list">
+                        <li>Java Spring Boot <span class="tech-badge">Core</span></li>
+                        <li>Spring Data JPA <span class="tech-badge">ORM</span></li>
+                        <li>PostgreSQL <span class="tech-badge">Database</span></li>
+                        <li>Maven <span class="tech-badge">Build</span></li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>AI & 機械学習</h4>
+                    <ul class="tech-stack-list">
+                        <li>Python FastAPI <span class="tech-badge">AI Service</span></li>
+                        <li>OpenAI API <span class="tech-badge">Embeddings</span></li>
+                        <li>OpenAI GPT-4 <span class="tech-badge">Summaries</span></li>
+                        <li>Pinecone <span class="tech-badge">Vector DB</span></li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>フロントエンド</h4>
+                    <ul class="tech-stack-list">
+                        <li>Thymeleaf <span class="tech-badge">Templates</span></li>
+                        <li>HTML5/CSS3 <span class="tech-badge">UI</span></li>
+                        <li>JavaScript <span class="tech-badge">Interaction</span></li>
+                        <li>Responsive Design <span class="tech-badge">Mobile</span></li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>インフラストラクチャ</h4>
+                    <ul class="tech-stack-list">
+                        <li>AWS EC2 <span class="tech-badge">Hosting</span></li>
+                        <li>AWS Route 53 <span class="tech-badge">DNS</span></li>
+                        <li>カスタムドメイン <span class="tech-badge">URL</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Capabilities -->
+        <div class="tech-section">
+            <h2>🤖 AI機能</h2>
+            
+            <h3>セマンティック検索</h3>
+            <p>OpenAI の text-embedding-3-small モデルを使用して、テキストの意味的理解に基づく高度な検索を実現しています。単純なキーワードマッチングではなく、概念や文脈を理解した検索が可能です。</p>
+            
+            <h3>インテリジェント要約</h3>
+            <p>GPT-4を活用して、各検索結果に対して以下の情報を自動生成：</p>
+            <ul>
+                <li><strong>文脈要約</strong>：該当箇所の背景と状況説明</li>
+                <li><strong>関連性説明</strong>：なぜその箇所が検索クエリに関連するかの解説</li>
+                <li><strong>背景情報</strong>：より深い理解のための追加コンテキスト</li>
+            </ul>
+            
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="tech-section">
+            <h2>📊 システム性能</h2>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-number">4879</span>
+                    <span class="metric-label">インデックス済みチャンク</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-number">60</span>
+                    <span class="metric-label">処理済み書籍</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-number">1536次元</span>
+                    <span class="metric-label">ベクトル空間</span>
+                </div>
+            </div>
+            
+            <h3>スケーラビリティ</h3>
+            <p>現在のアーキテクチャは60冊から数百冊への拡張を想定して設計されています。モジュラー設計により、各コンポーネントは独立してスケールできます。</p>
+        </div>
+
+        <!-- Data Processing Pipeline -->
+        <div class="tech-section">
+            <h2>🔄 データ処理パイプライン</h2>
+            
+            <h3>文書処理フロー</h3>
+            <ol>
+                <li><strong>テキスト抽出</strong>：デジタル書籍からの高精度テキスト抽出</li>
+                <li><strong>チャンキング</strong>：500トークン単位での文書分割（50トークンオーバーラップ）</li>
+                <li><strong>エンベディング生成</strong>：Python AIサービス経由でOpenAI APIを呼び出し</li>
+                <li><strong>ベクトル格納</strong>：Pineconeへの高速インデックス化</li>
+                <li><strong>メタデータ保存</strong>：PostgreSQLでの構造化データ管理</li>
+            </ol>
+            
+            <h3>検索処理フロー</h3>
+            <ol>
+                <li><strong>クエリ処理</strong>：ユーザー入力の前処理と最適化</li>
+                <li><strong>ベクトル化</strong>：検索クエリの埋め込みベクトル生成</li>
+                <li><strong>類似度検索</strong>：Pineconeでの高速近似最近傍探索</li>
+                <li><strong>AI要約生成</strong>：GPT-4による文脈理解と要約</li>
+                <li><strong>結果表示</strong>：ユーザーフレンドリーな形式での結果提示</li>
+            </ol>
+        </div>
+
+        <!-- Privacy Protection -->
+        <div class="tech-section">
+            <h2>🛡️ プライバシー保護</h2>
+            
+            <p>メンバーの皆様が安心してご利用いただけるよう、個人情報保護を最優先に設計されています。</p>
+            
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4>匿名アクセス</h4>
+                    <ul>
+                        <li>ユーザーアカウント不要の完全匿名検索</li>
+                        <li>検索履歴の保存なし</li>
+                        <li>個人を特定できる情報の収集なし</li>
+                        <li>各検索セッションの完全独立性</li>
+                    </ul>
+                </div>
+                
+                <div class="tech-card">
+                    <h4>データ保護</h4>
+                    <ul>
+                        <li>完全暗号化通信 (HTTPS/TLS)</li>
+                        <li>APIキーの安全な管理</li>
+                        <li>システム内でのクエリ履歴非保存</li>
+                        <li>個人識別情報の収集なし</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3>メンバー保護の理念</h3>
+            <p>従来の対面での指導相談とは異なり、本システムでは<strong>完全な匿名性</strong>を保ちながら池田先生の指導にアクセスできます。個人的な悩みや状況を安心して検索していただけ、判断や開示を恐れることなく、プライベートな環境で深い学びを得ることができます。</p>
+        </div>
+        
+        <!-- Core Security -->
+        <div class="tech-section">
+            <h2>🔒 セキュリティ</h2>
+            
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4>実装済み</h4>
+                    <ul>
+                        <li>暗号化通信 (HTTPS/TLS)</li>
+                        <li>APIキーの安全な管理</li>
+                        <li>エラーハンドリングとロギング</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Future Roadmap -->
+        <div class="tech-section">
+            <h2>🚀 今後の展開</h2>
+            
+            <h3>Phase 1: AWS本格展開</h3>
+            <ul>
+                <li>AWS EC2でのプロダクション展開</li>
+                <li>AWS RDS PostgreSQLへの移行</li>
+                <li>ロードバランサーとオートスケーリング</li>
+                <li>CloudWatchによる監視体制</li>
+                <li>データベース接続暗号化</li>
+                <li>自動リトライ機構とヘルスチェック</li>
+            </ul>
+            
+            <h3>Phase 2: 機能拡張</h3>
+            <ul>
+                <li>書籍コレクションの拡張（60冊→数百冊）</li>
+                <li>高度な検索フィルタリング</li>
+                <li>OpenAI企業向けプライバシー設定</li>
+                <li>個人情報自動フィルタリング機能</li>
+                <li>検索品質の機械学習による改善</li>
+            </ul>
+            
+            <h3>Phase 3: 高度化</h3>
+            <ul>
+                <li>多言語検索サポート（日本語・英語クエリ対応）</li>
+                <li>マルチモーダル検索（画像・音声対応）</li>
+                <li>リアルタイム協調フィルタリング</li>
+                <li>パーソナライズされた推薦システム</li>
+                <li>多言語UI完全対応</li>
+            </ul>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-links">
+            <a href="#privacy">プライバシーポリシー</a>
+            <a href="#terms">利用規約</a>
+            <a href="#support">サポート</a>
+        </div>
+        <p>&copy; 2025 先生指導検索システム。技術革新で知識の探求をお手伝いいたします。</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Reprocessing Tool - Bungaku Kensaku</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+        }
+        .book-card {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .needs-reprocessing {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+        .book-title {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        .book-stats {
+            color: #666;
+            margin: 10px 0;
+        }
+        .upload-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        button {
+            background: #2c5aa0;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1e3f73;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .loading {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Book Reprocessing Tool</h1>
+        
+        <p>Use this tool to reprocess books with the fixed EPUB extraction that captures full content.</p>
+        
+        <div id="booksList">
+            <p class="loading">Loading books...</p>
+        </div>
+        
+        <h2 style="margin-top: 40px;">🚀 Generate Embeddings</h2>
+        <div class="book-card" style="background: #e8f4fd;">
+            <p>After reprocessing books, generate embeddings for semantic search:</p>
+            <button onclick="generateEmbeddings()" style="background: #28a745;">
+                Generate Embeddings for All Chunks
+            </button>
+            <div id="embeddingResult"></div>
+        </div>
+        
+        <h2 style="margin-top: 40px;">📌 Pinecone Setup</h2>
+        <div class="book-card" style="background: #f3e5f5;">
+            <p><strong>Important:</strong> Before uploading vectors, ensure your Pinecone index exists. The index name should be: <code>bungaku-kensaku</code></p>
+            <p>To create the index:</p>
+            <ol>
+                <li>Go to <a href="https://app.pinecone.io" target="_blank">Pinecone Console</a></li>
+                <li>Click "Create Index"</li>
+                <li>Name: <code>bungaku-kensaku</code></li>
+                <li>Dimensions: <code>1536</code> (for OpenAI text-embedding-3-small)</li>
+                <li>Metric: <code>cosine</code></li>
+                <li>Pod Type: Choose based on your needs (e.g., p1.x1 for free tier)</li>
+            </ol>
+            <button onclick="checkPineconeConnection()" style="background: #9c27b0;">
+                Check Pinecone Connection
+            </button>
+            <div id="pineconeCheckResult"></div>
+        </div>
+        
+        <h2 style="margin-top: 40px;">🗑️ Clean Pinecone Index</h2>
+        <div class="book-card" style="background: #ffebee;">
+            <p><strong>Warning:</strong> Use this if you have orphaned vectors in Pinecone after reprocessing books.</p>
+            <p>This will delete ALL vectors from Pinecone and reset the upload status in the database. You'll need to re-upload embeddings after this.</p>
+            <button onclick="deleteAllPineconeVectors()" style="background: #d32f2f;">
+                🗑️ Delete All Pinecone Vectors
+            </button>
+            <div id="deleteResult"></div>
+        </div>
+        
+        <h2 style="margin-top: 40px;">🔄 Upload to Pinecone</h2>
+        <div class="book-card" style="background: #fff3e0;">
+            <p>After generating embeddings, upload them to Pinecone vector database:</p>
+            <div style="margin: 15px 0;">
+                <button onclick="uploadNewToPinecone()" style="background: #ff9800; margin-right: 10px;">
+                    Upload New Embeddings (Recommended)
+                </button>
+                <button onclick="uploadAllToPinecone()" style="background: #f44336;">
+                    Full Refresh - Upload All Embeddings
+                </button>
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                <strong>New Embeddings:</strong> Only uploads chunks not yet in Pinecone (efficient)<br>
+                <strong>Full Refresh:</strong> Re-uploads everything (use for data integrity checks or milestones)
+            </p>
+            <div id="pineconeResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load books on page load
+        async function loadBooks() {
+            try {
+                const response = await fetch('/api/migration/status');
+                const data = await response.json();
+                
+                const booksDiv = document.getElementById('booksList');
+                booksDiv.innerHTML = '';
+                
+                // Check if we have any books
+                if (!data.books || data.books.length === 0) {
+                    booksDiv.innerHTML = '<p>No books found in the database. Add books using the PDF Test page first.</p>';
+                    return;
+                }
+                
+                // Display summary
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'book-card';
+                summaryDiv.style.background = '#e8f4fd';
+                summaryDiv.innerHTML = `
+                    <h3>📊 Books Summary</h3>
+                    <p><strong>Total Books:</strong> ${data.totalBooks}</p>
+                    <p><strong>Books needing reprocessing:</strong> ${data.books.filter(book => book.needsReprocessing).length}</p>
+                    <p><strong>Books with full content:</strong> ${data.books.filter(book => !book.needsReprocessing).length}</p>
+                `;
+                booksDiv.appendChild(summaryDiv);
+                
+                // Create book cards (books are already sorted alphabetically by the backend)
+                data.books.forEach(book => {
+                    const bookCard = document.createElement('div');
+                    bookCard.className = 'book-card' + (book.needsReprocessing ? ' needs-reprocessing' : '');
+                    
+                    bookCard.innerHTML = `
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-stats">
+                            Book ID: ${book.id}<br>
+                            ${book.author ? `Author: ${book.author}<br>` : ''}
+                            ${book.series ? `Series: ${book.series}<br>` : ''}
+                            Current Chunks: ${book.currentChunks}<br>
+                            Status: ${book.needsReprocessing ? 
+                                '<span class="error">⚠️ Needs Reprocessing (truncated content)</span>' : 
+                                '<span class="success">✅ Full content extracted</span>'}
+                        </div>
+                        <div class="upload-section">
+                            <p>Upload the EPUB file to reprocess with full extraction:</p>
+                            <input type="file" id="file-${book.id}" accept=".epub">
+                            <br>
+                            <button onclick="reprocessBook(${book.id})">Reprocess Book</button>
+                            <div id="result-${book.id}"></div>
+                        </div>
+                    `;
+                    
+                    booksDiv.appendChild(bookCard);
+                });
+            } catch (error) {
+                document.getElementById('booksList').innerHTML = 
+                    `<p class="error">Error loading books: ${error.message}</p>`;
+            }
+        }
+        
+        async function reprocessBook(bookId) {
+            const fileInput = document.getElementById(`file-${bookId}`);
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select the EPUB file for this book');
+                return;
+            }
+            
+            const resultDiv = document.getElementById(`result-${bookId}`);
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Processing... This may take a minute...';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`/api/migration/reprocess-book/${bookId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ Success!</span><br>
+                        Old chunks: ${data.oldChunkCount}<br>
+                        New chunks: ${data.newChunkCount}<br>
+                        Total characters: ${data.totalCharacters.toLocaleString()}<br>
+                        Estimated pages: ~${data.estimatedPages}<br>
+                        <br>
+                        <button onclick="loadBooks()">Refresh List</button>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function generateEmbeddings() {
+            const resultDiv = document.getElementById('embeddingResult');
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<span class="loading">⏳ Generating embeddings... This may take a few minutes...</span>';
+            
+            try {
+                const response = await fetch('/api/migration/generate-embeddings', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ Success!</span><br>
+                        Total chunks: ${data.totalChunks}<br>
+                        Chunks needing embeddings: ${data.chunksNeedingEmbeddings}<br>
+                        Processed: ${data.totalProcessed}<br>
+                        Estimated cost: ${data.estimatedCost}<br>
+                        <br>
+                        ${data.message}
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function uploadNewToPinecone() {
+            const resultDiv = document.getElementById('pineconeResult');
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<span class="loading">⏳ Uploading new embeddings to Pinecone... This may take a few minutes...</span>';
+            
+            try {
+                const response = await fetch('/api/migration/upload-new-to-pinecone', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ Success!</span><br>
+                        Total chunks: ${data.totalChunks}<br>
+                        Chunks uploaded: ${data.chunksToUpload}<br>
+                        Total uploaded: ${data.totalUploaded}<br>
+                        Index vectors before: ${data.indexStatsBefore?.totalVectorCount || 'N/A'}<br>
+                        Index vectors after: ${data.indexStatsAfter?.totalVectorCount || 'N/A'}<br>
+                        <br>
+                        ${data.message}
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function checkPineconeConnection() {
+            const resultDiv = document.getElementById('pineconeCheckResult');
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<span class="loading">⏳ Checking Pinecone connection...</span>';
+            
+            try {
+                const response = await fetch('/api/migration/check-pinecone', {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                if (data.connected) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ Connected to Pinecone!</span><br>
+                        Index: ${data.indexName}<br>
+                        Dimension: ${data.dimension}<br>
+                        Total vectors: ${data.totalVectorCount}<br>
+                        <br>
+                        Your Pinecone index is ready for use.
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <span class="error">❌ Not connected to Pinecone</span><br>
+                        ${data.error}<br>
+                        <br>
+                        Please create the index in Pinecone Console first.
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function uploadAllToPinecone() {
+            const resultDiv = document.getElementById('pineconeResult');
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<span class="loading">⏳ Full refresh - uploading ALL embeddings to Pinecone... This may take a few minutes...</span>';
+            
+            try {
+                const response = await fetch('/api/migration/upload-all-to-pinecone', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ Success!</span><br>
+                        Total chunks: ${data.totalChunks}<br>
+                        Chunks with embeddings: ${data.chunksWithEmbeddings}<br>
+                        Total uploaded: ${data.totalUploaded}<br>
+                        Index vectors before: ${data.indexStatsBefore?.totalVectorCount || 'N/A'}<br>
+                        Index vectors after: ${data.indexStatsAfter?.totalVectorCount || 'N/A'}<br>
+                        <br>
+                        ${data.message}
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function deleteAllPineconeVectors() {
+            const resultDiv = document.getElementById('deleteResult');
+            
+            if (!confirm('⚠️ WARNING: This will delete ALL vectors from Pinecone!\n\nYou will need to re-upload embeddings after this.\n\nAre you sure you want to continue?')) {
+                return;
+            }
+            
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<span class="loading">⏳ Deleting all vectors from Pinecone... This may take a moment...</span>';
+            
+            try {
+                const response = await fetch('/api/migration/delete-all-pinecone-vectors', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ Success!</span><br>
+                        Vectors before deletion: ${data.vectorsBeforeDeletion}<br>
+                        Vectors after deletion: ${data.vectorsAfterDeletion}<br>
+                        Chunks reset in database: ${data.chunksReset}<br>
+                        <br>
+                        ${data.message}<br>
+                        <br>
+                        <strong>Next steps:</strong><br>
+                        1. Generate embeddings (if needed)<br>
+                        2. Upload embeddings to Pinecone
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        // Load books on page load
+        loadBooks();
+    </script>
+</body>
+</html>

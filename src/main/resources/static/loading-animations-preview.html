@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Loading Animation Options</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .option {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .option h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .loader-container {
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* Option 1: Gradient Orb with Pulse */
+        .orb-pulse {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #2c5aa0, #6b8dd6, #a8c0e8);
+            box-shadow: 0 0 20px rgba(44, 90, 160, 0.5);
+            animation: pulse-rotate 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-rotate {
+            0% {
+                transform: scale(1) rotate(0deg);
+                box-shadow: 0 0 20px rgba(44, 90, 160, 0.5);
+            }
+            50% {
+                transform: scale(1.1) rotate(180deg);
+                box-shadow: 0 0 30px rgba(44, 90, 160, 0.8);
+            }
+            100% {
+                transform: scale(1) rotate(360deg);
+                box-shadow: 0 0 20px rgba(44, 90, 160, 0.5);
+            }
+        }
+
+        /* Option 2: 3D Sphere with Mesh */
+        .sphere-3d {
+            width: 60px;
+            height: 60px;
+            position: relative;
+            animation: rotate-3d 3s linear infinite;
+        }
+
+        .sphere-3d::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #6b8dd6, #2c5aa0);
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.3);
+        }
+
+        .sphere-3d::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s linear infinite;
+        }
+
+        @keyframes rotate-3d {
+            0% { transform: rotateY(0deg) rotateX(0deg); }
+            100% { transform: rotateY(360deg) rotateX(360deg); }
+        }
+
+        @keyframes shimmer {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Option 3: Particle Orbit */
+        .particle-orbit {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        .particle-orbit .core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            margin: -15px 0 0 -15px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2c5aa0, #6b8dd6);
+            box-shadow: 0 0 15px rgba(44, 90, 160, 0.6);
+        }
+
+        .particle-orbit .particle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            margin: -4px 0 0 -4px;
+            border-radius: 50%;
+            background: #a8c0e8;
+        }
+
+        .particle-orbit .particle:nth-child(2) {
+            animation: orbit 1.5s linear infinite;
+        }
+
+        .particle-orbit .particle:nth-child(3) {
+            animation: orbit 1.5s linear infinite 0.5s;
+        }
+
+        .particle-orbit .particle:nth-child(4) {
+            animation: orbit 1.5s linear infinite 1s;
+        }
+
+        @keyframes orbit {
+            0% {
+                transform: rotate(0deg) translateX(30px) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: rotate(360deg) translateX(30px) rotate(-360deg);
+                opacity: 1;
+            }
+        }
+
+        /* Option 4: Zen Circle */
+        .zen-circle {
+            width: 60px;
+            height: 60px;
+            position: relative;
+        }
+
+        .zen-circle svg {
+            animation: rotate-smooth 4s linear infinite;
+        }
+
+        .zen-circle .path {
+            stroke-dasharray: 150;
+            stroke-dashoffset: 150;
+            animation: draw 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes rotate-smooth {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes draw {
+            0% { stroke-dashoffset: 150; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        /* Option 5: Neural Network */
+        .neural-network {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        .neural-network .node {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #2c5aa0;
+            box-shadow: 0 0 10px rgba(44, 90, 160, 0.5);
+        }
+
+        .neural-network .node:nth-child(1) { top: 10px; left: 34px; animation: pulse-node 2s ease-in-out infinite; }
+        .neural-network .node:nth-child(2) { top: 34px; left: 10px; animation: pulse-node 2s ease-in-out infinite 0.2s; }
+        .neural-network .node:nth-child(3) { top: 34px; left: 58px; animation: pulse-node 2s ease-in-out infinite 0.4s; }
+        .neural-network .node:nth-child(4) { top: 58px; left: 34px; animation: pulse-node 2s ease-in-out infinite 0.6s; }
+
+        .neural-network .connection {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #6b8dd6, transparent);
+            transform-origin: left center;
+            animation: flow 1.5s linear infinite;
+        }
+
+        .neural-network .connection:nth-child(5) { top: 16px; left: 40px; width: 30px; transform: rotate(45deg); }
+        .neural-network .connection:nth-child(6) { top: 16px; left: 20px; width: 30px; transform: rotate(135deg); }
+        .neural-network .connection:nth-child(7) { top: 40px; left: 16px; width: 42px; }
+        .neural-network .connection:nth-child(8) { top: 40px; left: 40px; width: 30px; transform: rotate(45deg); }
+
+        @keyframes pulse-node {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        @keyframes flow {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Option 6: Minimal Dots */
+        .minimal-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .minimal-dots .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #2c5aa0;
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+
+        .minimal-dots .dot:nth-child(1) { animation-delay: 0s; }
+        .minimal-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+        .minimal-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* Dark background demo */
+        .dark-demo {
+            background-color: #e0e0e0;
+        }
+
+        .description {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="option">
+        <h3>Option 1: Gradient Orb</h3>
+        <div class="loader-container">
+            <div class="orb-pulse"></div>
+        </div>
+        <p class="description">Smooth gradient sphere with pulsing glow effect</p>
+    </div>
+
+    <div class="option">
+        <h3>Option 2: 3D Sphere</h3>
+        <div class="loader-container">
+            <div class="sphere-3d"></div>
+        </div>
+        <p class="description">Realistic 3D sphere with light shimmer</p>
+    </div>
+
+    <div class="option">
+        <h3>Option 3: Particle Orbit</h3>
+        <div class="loader-container">
+            <div class="particle-orbit">
+                <div class="core"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+            </div>
+        </div>
+        <p class="description">Central core with orbiting particles</p>
+    </div>
+
+    <div class="option">
+        <h3>Option 4: Zen Circle</h3>
+        <div class="loader-container">
+            <div class="zen-circle">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <circle class="path" cx="30" cy="30" r="25" 
+                            fill="none" 
+                            stroke="#2c5aa0" 
+                            stroke-width="3"
+                            stroke-linecap="round"/>
+                </svg>
+            </div>
+        </div>
+        <p class="description">Meditative circle drawing animation</p>
+    </div>
+
+    <div class="option">
+        <h3>Option 5: Neural Network</h3>
+        <div class="loader-container">
+            <div class="neural-network">
+                <div class="node"></div>
+                <div class="node"></div>
+                <div class="node"></div>
+                <div class="node"></div>
+                <div class="connection"></div>
+                <div class="connection"></div>
+                <div class="connection"></div>
+                <div class="connection"></div>
+            </div>
+        </div>
+        <p class="description">AI neural network visualization</p>
+    </div>
+
+    <div class="option">
+        <h3>Option 6: Minimal Dots</h3>
+        <div class="loader-container">
+            <div class="minimal-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+        <p class="description">Simple, elegant loading dots</p>
+    </div>
+
+    <div class="option">
+        <h3>With Darker Background</h3>
+        <div class="loader-container dark-demo">
+            <div class="orb-pulse"></div>
+        </div>
+        <p class="description">Example with darker background overlay</p>
+    </div>
+
+    <div class="option">
+        <h3>With Text</h3>
+        <div class="loader-container" style="flex-direction: column; gap: 20px;">
+            <div class="particle-orbit">
+                <div class="core"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+            </div>
+            <div style="color: #666; font-size: 14px;">Searching wisdom...</div>
+        </div>
+        <p class="description">Animation with loading text</p>
+    </div>
+</body>
+</html>

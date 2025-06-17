@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者パネル - 書籍・シリーズ管理</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5aa0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 10px;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #2c5aa0, #4a7bc8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 150px;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .filter-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .filter-dropdown {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            min-width: 250px;
+        }
+        .books-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .books-table th,
+        .books-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .books-table th {
+            background-color: #2c5aa0;
+            color: white;
+            font-weight: bold;
+        }
+        .books-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .series-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .no-series {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .action-form {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-assign {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-remove {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.8;
+        }
+        .assign-series-form {
+            display: inline-flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .assign-series-input {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 150px;
+        }
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        .nav-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #2c5aa0;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+        
+        .series-management-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .series-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .series-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-width: 200px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .series-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .series-card-content {
+            flex-grow: 1;
+        }
+        
+        .series-name {
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 5px;
+        }
+        
+        .series-count {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="nav-link">← ホームに戻る</a>
+        
+        <h1>管理者パネル - 書籍・シリーズ管理</h1>
+        
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" th:text="${totalBooks}">0</div>
+                <div>総書籍数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" th:text="${unassignedCount}">0</div>
+                <div>未割り当て</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" th:text="${seriesCount}">0</div>
+                <div>シリーズ数</div>
+            </div>
+        </div>
+        
+        <!-- Success/Error Messages -->
+        <div th:if="${successMessage}" class="success-message" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage}" class="error-message" th:text="${errorMessage}"></div>
+        
+        <!-- Series Management Section -->
+        <div class="series-management-section" th:if="${!#lists.isEmpty(seriesInfoList)}">
+            <h3>シリーズ管理</h3>
+            <div class="series-cards">
+                <div class="series-card" th:each="seriesInfo : ${seriesInfoList}">
+                    <div class="series-card-content">
+                        <div class="series-name" th:text="${seriesInfo.seriesName}"></div>
+                        <div class="series-count" th:text="${seriesInfo.books.size()} + '冊'"></div>
+                    </div>
+                    <button class="btn btn-danger delete-series-btn" 
+                            th:data-series-name="${seriesInfo.seriesName}"
+                            th:data-book-count="${seriesInfo.books.size()}">
+                        削除
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <h3>書籍フィルター</h3>
+            <form method="get" action="/admin">
+                <select name="filter" class="filter-dropdown" onchange="this.form.submit()">
+                    <option value="all" th:selected="${currentFilter == 'all'}">すべての書籍</option>
+                    <option value="unassigned" th:selected="${currentFilter == 'unassigned'}">未割り当ての書籍</option>
+                    <option th:each="series : ${allSeries}" 
+                            th:value="${series}" 
+                            th:text="${series}"
+                            th:selected="${currentFilter == series}"></option>
+                </select>
+            </form>
+        </div>
+        
+        <!-- Books Table -->
+        <div>
+            <h3>書籍一覧 
+                <span th:if="${currentFilter == 'all'}">(すべて)</span>
+                <span th:if="${currentFilter == 'unassigned'}">(未割り当て)</span>
+                <span th:if="${currentFilter != 'all' and currentFilter != 'unassigned'}" th:text="|（${currentFilter}）|"></span>
+            </h3>
+            
+            <table class="books-table">
+                <thead>
+                    <tr>
+                        <th>書籍名</th>
+                        <th>シリーズ</th>
+                        <th>作成日</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="book : ${books}">
+                        <td th:text="${book.title}"></td>
+                        <td>
+                            <span th:if="${book.series != null}" 
+                                  class="series-badge" 
+                                  th:text="${book.series}"></span>
+                            <span th:if="${book.series == null}" 
+                                  class="no-series">未割り当て</span>
+                        </td>
+                        <td th:text="${#temporals.format(book.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+                        <td>
+                            <!-- Assign/Update Series Button -->
+                            <button class="btn btn-assign assign-series-btn"
+                                    th:data-book-id="${book.id}"
+                                    th:data-book-title="${book.title}"
+                                    th:data-current-series="${book.series ?: ''}">
+                                <span th:if="${book.series == null}">割り当て</span>
+                                <span th:if="${book.series != null}">更新</span>
+                            </button>
+                            
+                            <!-- Remove Series Button -->
+                            <button th:if="${book.series != null}"
+                                    class="btn btn-remove remove-series-btn"
+                                    th:data-book-id="${book.id}"
+                                    th:data-book-title="${book.title}"
+                                    th:data-series="${book.series}">
+                                削除
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div th:if="${#lists.isEmpty(books)}">
+                <p style="text-align: center; color: #6c757d; margin: 40px 0;">
+                    該当する書籍がありません。
+                </p>
+            </div>
+        </div>
+        
+        <!-- Hidden forms for POST requests -->
+        <form id="createSeriesForm" action="/admin/series/create" method="post" style="display: none;">
+            <input type="hidden" name="seriesName" id="createSeriesName">
+        </form>
+        
+        <form id="assignSeriesForm" method="post" style="display: none;">
+            <input type="hidden" name="seriesName" id="selectedSeriesName">
+        </form>
+        
+        <form id="removeSeriesForm" method="post" style="display: none;">
+        </form>
+        
+        <form id="deleteSeriesForm" method="post" style="display: none;">
+        </form>
+    </div>
+    
+    <!-- Create Series Modal -->
+    <div id="createSeriesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>新しいシリーズを作成</h2>
+                <span class="close" onclick="closeCreateSeriesModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="newSeriesName" placeholder="シリーズ名を入力..." class="modal-input">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCreateSeriesModal()">キャンセル</button>
+                <button class="btn btn-assign" onclick="createNewSeries()">作成</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assign Series Modal -->
+    <div id="assignSeriesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="assignModalTitle">シリーズに割り当て</h2>
+                <span class="close" onclick="closeAssignSeriesModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="assignBookInfo">書籍: <strong id="assignBookTitle"></strong></p>
+                
+                <!-- Existing Series Section -->
+                <div class="section-header">既存のシリーズに割り当て</div>
+                <div class="series-list" id="seriesList">
+                    <!-- Populated by JavaScript -->
+                </div>
+                
+                <!-- New Series Section -->
+                <div class="section-header">新しいシリーズを作成</div>
+                <input type="text" id="newSeriesInput" placeholder="新しいシリーズ名を入力..." class="modal-input">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAssignSeriesModal()">キャンセル</button>
+                <button class="btn btn-assign" onclick="assignSelectedSeries()" id="assignToExistingBtn">既存シリーズに割り当て</button>
+                <button class="btn btn-create" onclick="createAndAssignSeries()" id="createAndAssignBtn">新シリーズを作成して割り当て</button>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .create-series-card {
+            background: linear-gradient(135deg, #28a745, #34ce57) !important;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .create-series-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            border-radius: 8px;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: #2c5aa0;
+            border: none;
+            padding: 0;
+        }
+        
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .series-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .series-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .series-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .series-item.selected {
+            background-color: #2c5aa0;
+            color: white;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 20px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-create {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .section-header {
+            font-weight: bold;
+            color: #2c5aa0;
+            margin: 15px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section-header:first-of-type {
+            margin-top: 0;
+        }
+    </style>
+    
+    <script>
+        let currentBookId = null;
+        let selectedSeries = null;
+        let allSeries = [];
+        
+        function showCreateSeriesModal() {
+            document.getElementById('createSeriesModal').style.display = 'block';
+            document.getElementById('newSeriesName').focus();
+        }
+        
+        function closeCreateSeriesModal() {
+            document.getElementById('createSeriesModal').style.display = 'none';
+            document.getElementById('newSeriesName').value = '';
+        }
+        
+        function createNewSeries() {
+            const seriesName = document.getElementById('newSeriesName').value.trim();
+            if (!seriesName) {
+                alert('シリーズ名を入力してください。');
+                return;
+            }
+            
+            // Submit the form to create the series
+            const form = document.getElementById('createSeriesForm');
+            document.getElementById('createSeriesName').value = seriesName;
+            form.submit();
+        }
+        
+        function showAssignSeriesModal(bookId, bookTitle, currentSeries) {
+            currentBookId = bookId;
+            selectedSeries = currentSeries || null;
+            
+            document.getElementById('assignBookTitle').textContent = bookTitle;
+            document.getElementById('assignModalTitle').textContent = 
+                currentSeries ? 'シリーズを更新' : 'シリーズに割り当て';
+            
+            populateSeriesList();
+            document.getElementById('assignSeriesModal').style.display = 'block';
+        }
+        
+        function closeAssignSeriesModal() {
+            document.getElementById('assignSeriesModal').style.display = 'none';
+            currentBookId = null;
+            selectedSeries = null;
+            // Clear the new series input
+            document.getElementById('newSeriesInput').value = '';
+        }
+        
+        function populateSeriesList() {
+            const seriesList = document.getElementById('seriesList');
+            seriesList.innerHTML = '';
+            
+            if (allSeries.length === 0) {
+                seriesList.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">既存のシリーズがありません</p>';
+                return;
+            }
+            
+            allSeries.forEach(series => {
+                const item = document.createElement('div');
+                item.className = 'series-item';
+                item.textContent = series;
+                item.onclick = function() {
+                    // Remove previous selection
+                    document.querySelectorAll('.series-item').forEach(el => el.classList.remove('selected'));
+                    // Select this item
+                    item.classList.add('selected');
+                    selectedSeries = series;
+                };
+                
+                if (series === selectedSeries) {
+                    item.classList.add('selected');
+                }
+                
+                seriesList.appendChild(item);
+            });
+        }
+        
+        function assignSelectedSeries() {
+            if (!selectedSeries) {
+                alert('シリーズを選択してください。');
+                return;
+            }
+            
+            // Submit the form
+            const form = document.getElementById('assignSeriesForm');
+            form.action = '/admin/books/' + currentBookId + '/assign-series';
+            document.getElementById('selectedSeriesName').value = selectedSeries;
+            form.submit();
+        }
+        
+        function createAndAssignSeries() {
+            const newSeriesName = document.getElementById('newSeriesInput').value.trim();
+            if (!newSeriesName) {
+                alert('新しいシリーズ名を入力してください。');
+                return;
+            }
+            
+            // Check if series already exists
+            if (allSeries.includes(newSeriesName)) {
+                alert('シリーズ "' + newSeriesName + '" は既に存在します。');
+                return;
+            }
+            
+            // Submit the form to create series and assign book
+            const form = document.getElementById('assignSeriesForm');
+            form.action = '/admin/books/' + currentBookId + '/assign-series';
+            document.getElementById('selectedSeriesName').value = newSeriesName;
+            form.submit();
+        }
+        
+        function removeBookSeries(bookId, bookTitle, seriesName) {
+            if (confirm('書籍 "' + bookTitle + '" をシリーズ "' + seriesName + '" から削除しますか？')) {
+                const form = document.getElementById('removeSeriesForm');
+                form.action = '/admin/books/' + bookId + '/remove-series';
+                form.submit();
+            }
+        }
+        
+        function deleteSeries(seriesName, bookCount) {
+            const message = `シリーズ "${seriesName}" を削除しますか？\n\n` +
+                          `このシリーズには${bookCount}冊の書籍が割り当てられており、` +
+                          `すべて未割り当てに戻されます。\n\n` +
+                          `この操作は取り消すことができません。`;
+            
+            if (confirm(message)) {
+                const form = document.getElementById('deleteSeriesForm');
+                // URL encode the series name to handle special characters
+                const encodedSeriesName = encodeURIComponent(seriesName);
+                form.action = '/admin/series/' + encodedSeriesName + '/delete';
+                form.submit();
+            }
+        }
+        
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const createModal = document.getElementById('createSeriesModal');
+            const assignModal = document.getElementById('assignSeriesModal');
+            
+            if (event.target === createModal) {
+                closeCreateSeriesModal();
+            }
+            if (event.target === assignModal) {
+                closeAssignSeriesModal();
+            }
+        }
+        
+        // Handle Enter key in inputs and button event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate allSeries from server data
+            const seriesData = /*[[${allSeries}]]*/ [];
+            if (Array.isArray(seriesData) && seriesData.length > 0) {
+                allSeries = seriesData;
+            } else {
+                // Fallback: extract from dropdown options
+                const dropdown = document.querySelector('.filter-dropdown');
+                if (dropdown) {
+                    const options = dropdown.querySelectorAll('option');
+                    options.forEach(option => {
+                        const value = option.value;
+                        if (value && value !== 'all' && value !== 'unassigned') {
+                            allSeries.push(value);
+                        }
+                    });
+                }
+            }
+            
+            console.log('Loaded series:', allSeries); // Debug logging
+            document.getElementById('newSeriesName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    createNewSeries();
+                }
+            });
+            
+            // Add Enter key support for new series input in assign modal
+            document.getElementById('newSeriesInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    createAndAssignSeries();
+                }
+            });
+            
+            
+            // Event listeners for assign series buttons
+            document.querySelectorAll('.assign-series-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const bookId = this.dataset.bookId;
+                    const bookTitle = this.dataset.bookTitle;
+                    const currentSeries = this.dataset.currentSeries;
+                    showAssignSeriesModal(bookId, bookTitle, currentSeries);
+                });
+            });
+            
+            // Event listeners for remove series buttons
+            document.querySelectorAll('.remove-series-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const bookId = this.dataset.bookId;
+                    const bookTitle = this.dataset.bookTitle;
+                    const seriesName = this.dataset.series;
+                    removeBookSeries(bookId, bookTitle, seriesName);
+                });
+            });
+            
+            // Event listeners for delete series buttons
+            document.querySelectorAll('.delete-series-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const seriesName = this.dataset.seriesName;
+                    const bookCount = this.dataset.bookCount;
+                    deleteSeries(seriesName, bookCount);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

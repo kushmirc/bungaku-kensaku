@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Processing Test - 池田先生著作検索システム</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c5aa0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="file"],
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #2c5aa0;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #1e3d6f;
+        }
+        
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        
+        .loading {
+            display: none;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF処理テストページ</h1>
+        
+        <!-- Test 1: Extract Text -->
+        <div class="test-section">
+            <h2>1. PDFテキスト抽出テスト</h2>
+            <p>PDFファイルから最初の3ページのテキストを抽出します。</p>
+            
+            <form id="extractForm">
+                <div class="form-group">
+                    <label for="extractFile">PDFファイルを選択:</label>
+                    <input type="file" id="extractFile" accept=".pdf" required>
+                </div>
+                <button type="submit">テキスト抽出</button>
+                <span class="loading" id="extractLoading">処理中...</span>
+            </form>
+            
+            <div id="extractResult" class="result-box" style="display:none;"></div>
+        </div>
+        
+        <!-- Test 2: Test Chunking -->
+        <div class="test-section">
+            <h2>2. チャンキングテスト</h2>
+            <p>PDFをチャンクに分割して、結果をプレビューします（保存はしません）。</p>
+            
+            <form id="chunkForm">
+                <div class="form-group">
+                    <label for="chunkFile">PDFファイルを選択:</label>
+                    <input type="file" id="chunkFile" accept=".pdf" required>
+                </div>
+                <button type="submit">チャンキングテスト</button>
+                <span class="loading" id="chunkLoading">処理中...</span>
+            </form>
+            
+            <div id="chunkResult" class="result-box" style="display:none;"></div>
+        </div>
+        
+        <!-- Test 3: Process and Save -->
+        <div class="test-section">
+            <h2>3. PDF処理＆データベース保存</h2>
+            <p>PDFを処理してデータベースに保存します。</p>
+            
+            <form id="saveForm">
+                <div class="form-group">
+                    <label for="saveFile">PDFファイルを選択:</label>
+                    <input type="file" id="saveFile" accept=".pdf" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookTitle">書籍タイトル:</label>
+                    <input type="text" id="bookTitle" placeholder="例: 新・人間革命 第1巻" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookAuthor">著者:</label>
+                    <input type="text" id="bookAuthor" value="池田大作" required>
+                </div>
+                <button type="submit">処理＆保存</button>
+                <span class="loading" id="saveLoading">処理中...</span>
+            </form>
+            
+            <div id="saveResult" class="result-box" style="display:none;"></div>
+        </div>
+        
+        <!-- View Saved Books -->
+        <div class="test-section">
+            <h2>4. 保存された書籍一覧</h2>
+            <button onclick="loadBooks()">書籍一覧を取得</button>
+            <div id="booksList" class="result-box" style="display:none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Extract Text Test
+        document.getElementById('extractForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('extractFile').files[0];
+            const loading = document.getElementById('extractLoading');
+            const result = document.getElementById('extractResult');
+            
+            loading.style.display = 'inline';
+            result.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/test/document/extract-text', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="success">テキスト抽出成功！</div>
+                        <strong>ファイル名:</strong> ${data.filename}<br>
+                        <strong>総ページ数:</strong> ${data.pageCount}<br>
+                        <strong>抽出文字数:</strong> ${data.totalLength}<br>
+                        <strong>PDFタイトル:</strong> ${data.pdfTitle || '(なし)'}<br>
+                        <strong>PDF著者:</strong> ${data.pdfAuthor || '(なし)'}<br><br>
+                        <strong>テキストプレビュー (最初の1000文字):</strong><br>
+                        ${data.textPreview}
+                    `;
+                } else {
+                    result.innerHTML = `<div class="error">エラー: ${data.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">エラー: ${error.message}</div>`;
+            } finally {
+                loading.style.display = 'none';
+                result.style.display = 'block';
+            }
+        });
+        
+        // Chunking Test
+        document.getElementById('chunkForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('chunkFile').files[0];
+            const loading = document.getElementById('chunkLoading');
+            const result = document.getElementById('chunkResult');
+            
+            loading.style.display = 'inline';
+            result.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/test/document/test-chunking', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let chunksHtml = '';
+                    data.chunkPreviews.forEach((chunk, index) => {
+                        chunksHtml += `
+                            <strong>チャンク ${index + 1}:</strong> (${chunk.length}文字)<br>
+                            ${chunk.content}<br><br>
+                        `;
+                    });
+                    
+                    result.innerHTML = `
+                        <div class="success">チャンキング成功！</div>
+                        <strong>総チャンク数:</strong> ${data.totalChunks}<br>
+                        <strong>平均チャンク長:</strong> ${Math.round(data.avgChunkLength)}文字<br><br>
+                        <strong>チャンクプレビュー (最初の5個):</strong><br><br>
+                        ${chunksHtml}
+                    `;
+                } else {
+                    result.innerHTML = `<div class="error">エラー: ${data.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">エラー: ${error.message}</div>`;
+            } finally {
+                loading.style.display = 'none';
+                result.style.display = 'block';
+            }
+        });
+        
+        // Auto-populate title when file is selected
+        document.getElementById('saveFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // Extract filename without extension
+                const fileName = file.name;
+                const titleWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+                
+                // Set the title field
+                document.getElementById('bookTitle').value = titleWithoutExtension;
+            }
+        });
+
+        // Process and Save
+        document.getElementById('saveForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('saveFile').files[0];
+            const title = document.getElementById('bookTitle').value;
+            const author = document.getElementById('bookAuthor').value;
+            const loading = document.getElementById('saveLoading');
+            const result = document.getElementById('saveResult');
+            
+            loading.style.display = 'inline';
+            result.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('title', title);
+            formData.append('author', author);
+            
+            try {
+                const response = await fetch('/api/test/document/process-and-save', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="success">処理＆保存成功！</div>
+                        <strong>書籍ID:</strong> ${data.bookId}<br>
+                        <strong>書籍タイトル:</strong> ${data.bookTitle}<br>
+                        <strong>作成されたチャンク数:</strong> ${data.chunksCreated}<br><br>
+                        <strong>最初のチャンクプレビュー:</strong><br>
+                        ${data.firstChunkPreview}...
+                    `;
+                } else {
+                    result.innerHTML = `<div class="error">エラー: ${data.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">エラー: ${error.message}</div>`;
+            } finally {
+                loading.style.display = 'none';
+                result.style.display = 'block';
+            }
+        });
+        
+        // Load Books
+        async function loadBooks() {
+            const result = document.getElementById('booksList');
+            
+            try {
+                const response = await fetch('/api/test/document/books');
+                const books = await response.json();
+                
+                if (books.length === 0) {
+                    result.innerHTML = '<div>まだ書籍が保存されていません。</div>';
+                } else {
+                    let booksHtml = '<strong>保存された書籍:</strong><br><br>';
+                    books.forEach(book => {
+                        booksHtml += `
+                            <strong>${book.title}</strong> - ${book.author} (${book.year})<br>
+                            <a href="#" onclick="loadChunks(${book.id}, '${book.title}'); return false;">チャンクを表示</a><br><br>
+                        `;
+                    });
+                    result.innerHTML = booksHtml;
+                }
+                
+                result.style.display = 'block';
+            } catch (error) {
+                result.innerHTML = `<div class="error">エラー: ${error.message}</div>`;
+                result.style.display = 'block';
+            }
+        }
+        
+        // Load Chunks for a Book
+        async function loadChunks(bookId, bookTitle) {
+            const result = document.getElementById('booksList');
+            
+            try {
+                const response = await fetch(`/api/test/document/books/${bookId}/chunks`);
+                const data = await response.json();
+                
+                let chunksHtml = `<strong>${bookTitle} のチャンク:</strong><br><br>`;
+                chunksHtml += `<strong>総チャンク数:</strong> ${data.totalChunks}<br><br>`;
+                
+                data.chunks.forEach(chunk => {
+                    chunksHtml += `
+                        <strong>チャンクID ${chunk.id}:</strong> (ページ ${chunk.pageNumber || '不明'})<br>
+                        ${chunk.contentPreview}<br><br>
+                    `;
+                });
+                
+                chunksHtml += '<br><a href="#" onclick="loadBooks(); return false;">書籍一覧に戻る</a>';
+                
+                result.innerHTML = chunksHtml;
+            } catch (error) {
+                result.innerHTML = `<div class="error">エラー: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

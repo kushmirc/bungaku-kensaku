@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>池田先生指導検索 - 池田先生の著作検索システム</title>
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">先生指導検索</div>
+            <ul class="nav-links">
+                <li><a href="/">ホーム</a></li>
+                <li><a href="/overview">概要</a></li>
+                <li><a href="/features">機能</a></li>
+                <li><a href="/contact">お問い合わせ</a></li>
+                <li>
+                    <form method="post" action="/logout" style="display: inline;">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <button type="submit" class="logout-link" style="border: none; background: none; font: inherit; cursor: pointer;">ログアウト</button>
+                    </form>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero-section">
+            <h1 class="hero-title">池田先生著作検索システム</h1>
+            <p class="hero-subtitle">AIを利用して先生のご指導を検索いたします</p>
+        </section>
+
+        <section class="search-container" id="search-container">
+            <div class="search-top-section">
+                <div class="vintage-illustration">
+                    <img th:src="@{/images/sensei_at_desk.png}" alt="学者" class="sensei-image">
+                </div>
+                <div class="search-form">
+                    <form action="/search" method="post" id="search-form">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <div class="search-input-container">
+                            <textarea class="search-input" name="query" placeholder="ご質問をどうぞ...今日は何についてお調べになりますか？" rows="1" required></textarea>
+                            <button class="search-button" type="submit">検索</button>
+                        </div>
+                        
+                        <div class="search-options">
+                            <div class="search-scope">
+                                <label class="radio-option">
+                                    <input type="radio" name="searchScope" value="all" th:checked="${searchScope == null or searchScope == 'all'}">
+                                    <span>全著作から検索</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="searchScope" value="specific" th:checked="${searchScope == 'specific'}">
+                                    <span>書籍・シリーズから選択</span>
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="book-selections" th:style="${searchScope == 'specific'} ? 'display: flex;' : 'display: none;'">
+                <!-- Dynamic series and book chips from database -->
+                <div th:each="seriesInfo : ${seriesInfoList}">
+                    <!-- Multi-book series with dropdown -->
+                    <div th:if="${!seriesInfo.singleBook}" class="suggestion-chip has-dropdown">
+                        <span th:text="${seriesInfo.seriesName}"></span>
+                        <span class="dropdown-arrow">▼</span>
+                        <div class="dropdown-menu">
+                            <label class="dropdown-item">
+                                <input type="checkbox" th:name="|series_${seriesInfo.seriesName}|" th:value="all">
+                                全巻
+                            </label>
+                            <label th:each="book : ${seriesInfo.books}" class="dropdown-item">
+                                <input type="checkbox" th:name="|book_${book.id}|" th:value="${book.id}">
+                                <span th:text="${book.title}"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <!-- Single books without dropdown -->
+                    <div th:if="${seriesInfo.singleBook}" class="suggestion-chip single-book" th:data-book-id="${seriesInfo.books[0].id}">
+                        <span th:text="${seriesInfo.seriesName}"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="search-results" th:style="${results != null and !results.isEmpty()} ? '' : 'display: none;'">
+                <div class="results-header">
+                    <h3>検索結果</h3>
+                    <div class="results-info">
+                        <span class="search-scope-info" th:if="${searchedBooks != null and !searchedBooks.isEmpty()}">
+                            <span class="books-display" 
+                                  th:attr="title=${#strings.listJoin(searchedBooks, '、')}">
+                                <span th:text="${#strings.abbreviate(#strings.listJoin(searchedBooks, '、'), 25)}"></span>
+                            </span>
+                            <span> から</span>
+                        </span>
+                        <span class="result-count" th:if="${resultCount != null and resultCount > 0}" th:text="${resultCount} + '件の結果が見つかりました。'"></span>
+                    </div>
+                    <button class="clear-results">クリア</button>
+                </div>
+                <div class="results-content">
+                    <div th:if="${results != null and results.isEmpty()}" class="search-message">
+                        検索結果が見つかりませんでした。
+                    </div>
+                    <div th:each="result : ${results}" class="search-result-item">
+                        <div class="result-header">
+                            <h4 class="book-title" th:text="${result.bookTitle}"></h4>
+                            <span class="result-score" th:text="|関連度: ${#numbers.formatDecimal(result.score * 100, 1, 1)}%|"></span>
+                        </div>
+                        <div class="result-metadata">
+                            <span th:if="${result.sourceReference}" 
+                                  th:utext="${result.sourceReference}" class="source-reference"></span>
+                            <span th:if="${result.chapter != null and result.sourceReference == null}" 
+                                  th:utext="|章: ${result.chapter}|"></span>
+                        </div>
+                        
+                        <!-- AI-generated summary section -->
+                        <div class="ai-summary" th:if="${result.contextSummary != null and !result.contextSummary.isEmpty()}">
+                            <div class="context-summary">
+                                <h5>文脈</h5>
+                                <p th:text="${result.contextSummary}"></p>
+                            </div>
+                            <div class="relevance-explanation" th:if="${result.relevanceExplanation != null and !result.relevanceExplanation.isEmpty()}">
+                                <h5>関連性</h5>
+                                <p th:text="${result.relevanceExplanation}"></p>
+                            </div>
+                        </div>
+                        
+                        <!-- Expandable full text -->
+                        <div class="expandable-content">
+                            <div class="result-content collapsed" th:utext="${result.content}"></div>
+                        </div>
+                        
+                        <div class="result-actions">
+                            <button class="expand-toggle" onclick="toggleExpand(this)">
+                                <span class="expand-text">全文を表示</span>
+                                <span class="collapse-text" style="display: none;">全文を隠す</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h3 class="feature-title">深層検索</h3>
+                <p class="feature-description">人工知能を活用した高度な分析により、複数の著作から包括的な情報にアクセスいたします。</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">即座の回答</h3>
+                <p class="feature-description">高速処理能力により、複雑なご質問に対して即座に正確な回答をご提供いたします。</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3 class="feature-title">文脈理解</h3>
+                <p class="feature-description">文脈やニュアンス、ご質問の深い意味を理解するAIの恩恵をお受けいただけます。</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-links">
+            <a href="#privacy">プライバシーポリシー</a>
+            <a href="#terms">利用規約</a>
+            <a href="#support">サポート</a>
+        </div>
+        <p>&copy; 2025 先生指導検索システム。知識の探求をお手伝いいたします。</p>
+    </footer>
+
+    <script th:src="@{/js/home.js}"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Application Configuration ###
+# Ignore all configuration files with potential secrets
+application-local.properties
+application-prod.properties
+application-production.properties
+application-dev.properties
+application-python.properties
+# Keep example file for reference
+!application-example.properties
+
+### macOS ###
+.DS_Store
+**/.DS_Store
+
+### Logs and Runtime Files ###
+*.log
+app.log
+app_startup.log
+logs/
+
+### Build and Runtime Artifacts ###
+BOOT-INF/
+temp_extract/
+claude-update-temp/
+
+### Database and Data Files ###
+*.sql.gz
+*.sql
+
+### Python Virtual Environment ###
+venv/
+__pycache__/
+*.pyc
+
+### Scripts (deployment specific) ###
+scripts/*.sh
+
+### Personal Development Notes ###
+docs/development-sessions/
+*.session.md
+
+### Project-Specific Files to Keep Local ###
+CLAUDE.md
