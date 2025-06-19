@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# EC2 Initial Setup Script for Sensei Search
+# EC2 Initial Setup Script for Bungaku Kensaku
 # Run this script on your EC2 instance to set up the environment
 
-echo "=== Sensei Search EC2 Setup Script ==="
-echo "This script will set up the EC2 environment for Sensei Search"
+echo "=== Bungaku Kensaku EC2 Setup Script ==="
+echo "This script will set up the EC2 environment for Bungaku Kensaku"
 echo ""
 
 # Check if running as root
@@ -23,11 +23,11 @@ sudo apt install -y openjdk-17-jdk maven git postgresql postgresql-contrib nginx
 
 # Create application directory
 echo "Creating application directory..."
-sudo mkdir -p /opt/sensei-search
-sudo chown $USER:$USER /opt/sensei-search
+sudo mkdir -p /opt/bungaku-kensaku
+sudo chown $USER:$USER /opt/bungaku-kensaku
 
 # Create log directory
-mkdir -p /opt/sensei-search/logs
+mkdir -p /opt/bungaku-kensaku/logs
 
 # Set up PostgreSQL
 echo "Setting up PostgreSQL..."
@@ -36,16 +36,16 @@ sudo systemctl enable postgresql
 
 # Create database and user
 echo "Creating database and user..."
-sudo -u postgres psql -c "CREATE DATABASE sensei_search;"
-sudo -u postgres psql -c "CREATE USER sensei_user WITH PASSWORD 'sensei2024';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sensei_search TO sensei_user;"
+sudo -u postgres psql -c "CREATE DATABASE bungaku_kensaku;"
+sudo -u postgres psql -c "CREATE USER bungaku_user WITH PASSWORD 'bungaku2024';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE bungaku_kensaku TO bungaku_user;"
 
 # Configure Nginx
 echo "Setting up Nginx configuration..."
-sudo tee /etc/nginx/sites-available/sensei-search > /dev/null << 'EOF'
+sudo tee /etc/nginx/sites-available/bungaku-kensaku > /dev/null << 'EOF'
 server {
     listen 80;
-    server_name sensei-search.com www.sensei-search.com;
+    server_name bungaku-kensaku.com www.bungaku-kensaku.com;
 
     # Main application
     location / {
@@ -68,29 +68,29 @@ server {
 EOF
 
 # Enable the site
-sudo ln -sf /etc/nginx/sites-available/sensei-search /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/bungaku-kensaku /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 
 # Create environment file template
 echo "Creating environment file template..."
-cat > /opt/sensei-search/.env << 'EOF'
-# Environment Variables for Sensei Search
+cat > /opt/bungaku-kensaku/.env << 'EOF'
+# Environment Variables for Bungaku Kensaku
 # IMPORTANT: Replace these with your actual API keys
 
 export OPENAI_API_KEY="your-openai-api-key-here"
 export PINECONE_API_KEY="your-pinecone-api-key-here"
 export PINECONE_ENVIRONMENT="us-east-1"
-export PINECONE_INDEX_NAME="sensei-search"
+export PINECONE_INDEX_NAME="bungaku-kensaku"
 EOF
 
 # Set secure permissions on environment file
-chmod 600 /opt/sensei-search/.env
+chmod 600 /opt/bungaku-kensaku/.env
 
 # Clone the repository
 echo "Cloning repository..."
-cd /opt/sensei-search
-git clone https://github.com/your-username/sensei-guidance-search.git .
+cd /opt/bungaku-kensaku
+git clone https://github.com/your-username/bungaku-kensaku.git .
 
 # Make scripts executable
 chmod +x scripts/*.sh
@@ -99,7 +99,7 @@ echo ""
 echo "=== Setup Complete! ==="
 echo ""
 echo "Next steps:"
-echo "1. Edit /opt/sensei-search/.env with your actual API keys"
+echo "1. Edit /opt/bungaku-kensaku/.env with your actual API keys"
 echo "2. Update the database password in src/main/resources/application-production.properties"
 echo "3. Configure your domain DNS to point to this EC2 instance"
 echo "4. Run: ./scripts/deploy.sh to start the application"
@@ -111,7 +111,7 @@ echo "  ./scripts/manage.sh stop     - Stop services"
 echo "  ./scripts/manage.sh logs     - View logs"
 echo ""
 echo "Important files:"
-echo "  /opt/sensei-search/.env                                    - API keys"
-echo "  /opt/sensei-search/src/main/resources/application-production.properties - App config"
-echo "  /etc/nginx/sites-available/sensei-search                   - Nginx config"
-echo "  /opt/sensei-search/logs/                                    - Application logs"
+echo "  /opt/bungaku-kensaku/.env                                    - API keys"
+echo "  /opt/bungaku-kensaku/src/main/resources/application-production.properties - App config"
+echo "  /etc/nginx/sites-available/bungaku-kensaku                   - Nginx config"
+echo "  /opt/bungaku-kensaku/logs/                                    - Application logs"

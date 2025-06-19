@@ -1,11 +1,11 @@
-# Sensei Search AWS EC2 Deployment Guide
+# Bungaku Kensaku AWS EC2 Deployment Guide
 
-This guide covers deploying the Sensei Guidance Search application to AWS EC2.
+This guide covers deploying the Bungaku Kensaku application to AWS EC2.
 
 ## Prerequisites
 
 - AWS EC2 instance (t2.micro or larger) running Ubuntu 22.04
-- Domain name purchased through AWS Route 53 (e.g., sensei-search.com)
+- Domain name purchased through AWS Route 53 (e.g., bungaku-kensaku.com)
 - OpenAI API key
 - Pinecone API key
 
@@ -17,7 +17,7 @@ SSH into your EC2 instance and run the setup script:
 
 ```bash
 # Download and run the setup script
-wget https://raw.githubusercontent.com/your-username/sensei-guidance-search/main/scripts/setup-ec2.sh
+wget https://raw.githubusercontent.com/your-username/bungaku-kensaku/main/scripts/setup-ec2.sh
 chmod +x setup-ec2.sh
 ./setup-ec2.sh
 ```
@@ -27,7 +27,7 @@ chmod +x setup-ec2.sh
 Edit the environment file with your actual API keys:
 
 ```bash
-nano /opt/sensei-search/.env
+nano /opt/bungaku-kensaku/.env
 ```
 
 Replace the placeholder values:
@@ -41,18 +41,18 @@ export PINECONE_API_KEY="your-actual-pinecone-key"
 Edit the production configuration:
 
 ```bash
-nano /opt/sensei-search/src/main/resources/application-production.properties
+nano /opt/bungaku-kensaku/src/main/resources/application-production.properties
 ```
 
 Update the database password line:
 ```properties
-spring.datasource.password=sensei2024
+spring.datasource.password=bungaku2024
 ```
 
 ### 4. Deploy Application
 
 ```bash
-cd /opt/sensei-search
+cd /opt/bungaku-kensaku
 ./scripts/deploy.sh
 ```
 
@@ -92,11 +92,11 @@ Use the management script to control services:
 
 ## File Locations
 
-- **Application**: `/opt/sensei-search/`
-- **Logs**: `/opt/sensei-search/logs/`
-- **Configuration**: `/opt/sensei-search/src/main/resources/application-production.properties`
-- **Environment**: `/opt/sensei-search/.env`
-- **Nginx Config**: `/etc/nginx/sites-available/sensei-search`
+- **Application**: `/opt/bungaku-kensaku/`
+- **Logs**: `/opt/bungaku-kensaku/logs/`
+- **Configuration**: `/opt/bungaku-kensaku/src/main/resources/application-production.properties`
+- **Environment**: `/opt/bungaku-kensaku/.env`
+- **Nginx Config**: `/etc/nginx/sites-available/bungaku-kensaku`
 
 ## Monitoring
 
@@ -108,10 +108,10 @@ Use the management script to control services:
 ### View Real-time Logs
 ```bash
 # Java application logs
-tail -f /opt/sensei-search/logs/app.log
+tail -f /opt/bungaku-kensaku/logs/app.log
 
 # Python service logs
-tail -f /opt/sensei-search/logs/python-ai.log
+tail -f /opt/bungaku-kensaku/logs/python-ai.log
 ```
 
 ### Check System Resources
@@ -138,7 +138,7 @@ ps aux | grep python
 
 2. Verify database connection:
    ```bash
-   sudo -u postgres psql -d sensei_search -c "SELECT 1;"
+   sudo -u postgres psql -d bungaku_kensaku -c "SELECT 1;"
    ```
 
 3. Check if ports are available:
@@ -150,21 +150,21 @@ ps aux | grep python
 
 1. Reset database:
    ```bash
-   sudo -u postgres psql -c "DROP DATABASE sensei_search;"
-   sudo -u postgres psql -c "CREATE DATABASE sensei_search;"
-   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sensei_search TO sensei_user;"
+   sudo -u postgres psql -c "DROP DATABASE bungaku_kensaku;"
+   sudo -u postgres psql -c "CREATE DATABASE bungaku_kensaku;"
+   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE bungaku_kensaku TO bungaku_user;"
    ```
 
 2. Check database connection:
    ```bash
-   sudo -u postgres psql -d sensei_search -U sensei_user
+   sudo -u postgres psql -d bungaku_kensaku -U bungaku_user
    ```
 
 ### Python Environment Issues
 
 1. Recreate virtual environment:
    ```bash
-   cd /opt/sensei-search/python-ai-service
+   cd /opt/bungaku-kensaku/python-ai-service
    rm -rf venv
    python3 -m venv venv
    source venv/bin/activate
@@ -200,7 +200,7 @@ If the t2.micro instance runs out of memory:
 To deploy updates:
 
 ```bash
-cd /opt/sensei-search
+cd /opt/bungaku-kensaku
 ./scripts/deploy.sh
 ```
 
@@ -226,7 +226,7 @@ To set up HTTPS with Let's Encrypt:
 sudo apt install certbot python3-certbot-nginx
 
 # Get certificate
-sudo certbot --nginx -d sensei-search.com -d www.sensei-search.com
+sudo certbot --nginx -d bungaku-kensaku.com -d www.bungaku-kensaku.com
 
 # Test auto-renewal
 sudo certbot renew --dry-run
