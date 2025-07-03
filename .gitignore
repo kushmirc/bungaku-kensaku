@@ -75,3 +75,9 @@ docs/development-sessions/
 
 ### Project-Specific Files to Keep Local ###
 CLAUDE.md
+
+### Debugging and Development Files ###
+debug_migration_api.sh
+test_migration_fix.sh
+cookies.txt
+MIGRATION_API_FIX_SUMMARY.md
