@@ -28,6 +28,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 // Allow public access to login page and static resources
                 .requestMatchers("/login", "/css/**", "/js/**", "/images/**", "/robots.txt").permitAll()
+                // Allow public access to migration endpoints for development/admin purposes
+                .requestMatchers("/api/migration/**", "/migration").permitAll()
                 // Require authentication for all other pages
                 .anyRequest().authenticated()
             )
@@ -42,6 +44,10 @@ public class SecurityConfig {
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout")
                 .permitAll()
+            )
+            .csrf(csrf -> csrf
+                // Disable CSRF for test and migration API endpoints to avoid "Forbidden" errors during development
+                .ignoringRequestMatchers("/api/test/**", "/api/migration/**")
             )
             .userDetailsService(userDetailsService);
         

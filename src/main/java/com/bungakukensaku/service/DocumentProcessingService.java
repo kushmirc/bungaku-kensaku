@@ -77,8 +77,24 @@ public class DocumentProcessingService {
                 chunks = processEPUBWithChapters(filePath, book);
                 logger.info("Created {} chunks from EPUB with chapter data", chunks.size());
                 return chunks; // Early return for EPUB
+            } else if (filePath.toLowerCase().endsWith(".html") || filePath.toLowerCase().endsWith(".htm")) {
+                logger.info("Processing as HTML file: {}", filePath);
+                // Check if HTML has chapter structure for intelligent processing
+                boolean hasChapters = hasChapterStructure(filePath);
+                logger.info("HTML chapter structure check result: {}", hasChapters);
+                
+                if (hasChapters) {
+                    logger.info("HTML file has chapter structure - using chapter-aware processing");
+                    chunks = processHTMLWithChapters(filePath, book);
+                    logger.info("Created {} chunks from HTML with chapter data", chunks.size());
+                    return chunks; // Early return for structured HTML
+                } else {
+                    logger.info("HTML file is simple document - using text extraction");
+                    fullText = extractTextFromHTML(filePath);
+                    logger.info("Extracted {} characters from HTML", fullText.length());
+                }
             } else {
-                throw new IllegalArgumentException("Unsupported file format. Only PDF and EPUB are supported.");
+                throw new IllegalArgumentException("Unsupported file format. Only PDF, EPUB, and HTML are supported.");
             }
             
             // Split into chunks with metadata
@@ -143,20 +159,213 @@ public class DocumentProcessingService {
     }
     
     /**
+     * Extract text from an HTML file using Apache Tika
+     * Handles various encodings including Shift_JIS for Aozora Bunko format
+     * 
+     * @param htmlPath Path to the HTML file
+     * @return Extracted text as a single string
+     * @throws IOException if HTML cannot be read
+     */
+    private String extractTextFromHTML(String htmlPath) throws IOException {
+        try {
+            // First, read HTML with proper encoding
+            String htmlContent = readHTMLWithEncoding(htmlPath);
+            
+            // Log a sample of what we read to debug encoding issues
+            logger.debug("Raw HTML content sample (first 200 chars): {}", 
+                htmlContent.length() > 200 ? htmlContent.substring(0, 200) : htmlContent);
+            
+            // For Aozora Bunko files, let's try a simpler approach without Tika
+            // since Tika might be re-encoding incorrectly
+            if (htmlContent.contains("青空文庫") || htmlContent.contains("aozora")) {
+                logger.debug("Processing as Aozora Bunko file - using simple HTML parsing");
+                String text = extractTextFromHTMLSimple(htmlContent);
+                // Don't call cleanText() here - extractTextFromHTMLSimple already cleans the text
+                logger.info("Extracted {} characters using simple parsing (already cleaned)", text.length());
+                return text;
+            }
+            
+            // Use Apache Tika to parse the properly encoded HTML
+            AutoDetectParser parser = new AutoDetectParser();
+            BodyContentHandler handler = new BodyContentHandler(-1); // Remove size limit
+            Metadata metadata = new Metadata();
+            ParseContext context = new ParseContext();
+            
+            // Convert string to input stream with UTF-8 (since we've already handled encoding)
+            try (InputStream stream = new java.io.ByteArrayInputStream(htmlContent.getBytes("UTF-8"))) {
+                parser.parse(stream, handler, metadata, context);
+            }
+            
+            // Get extracted text
+            String text = handler.toString();
+            
+            // Clean up the text
+            text = cleanText(text);
+            
+            logger.debug("Extracted {} characters from HTML using Tika", text.length());
+            logger.debug("Content type: {}", metadata.get("Content-Type"));
+            
+            return text;
+        } catch (Exception e) {
+            logger.error("Error extracting text from HTML file: {}", e.getMessage(), e);
+            throw new IOException("Failed to extract text from HTML: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Simple HTML text extraction without Tika
+     * For cases where Tika causes encoding issues
+     * 
+     * @param htmlContent Raw HTML content
+     * @return Extracted text
+     */
+    private String extractTextFromHTMLSimple(String htmlContent) {
+        logger.info("=== HTML EXTRACTION DEBUG START ===");
+        logger.info("Raw HTML content length: {}", htmlContent.length());
+        logger.info("HTML content sample (first 500 chars): {}", 
+            htmlContent.length() > 500 ? htmlContent.substring(0, 500) : htmlContent);
+        
+        // Find the main text content - for Aozora Bunko, look for specific patterns
+        int startIndex = htmlContent.indexOf("<div class=\"main_text\">");
+        if (startIndex == -1) {
+            startIndex = htmlContent.indexOf("<div class=main_text>");
+        }
+        
+        logger.info("Found main_text div at index: {}", startIndex);
+        
+        if (startIndex != -1) {
+            // Just extract everything from main_text to the end
+            // Don't try to be clever about finding end markers - it causes more problems than it solves
+            int endIndex = htmlContent.indexOf("</body>");
+            if (endIndex == -1) {
+                endIndex = htmlContent.length();
+            }
+            
+            logger.info("End index (</body> or end of file): {}", endIndex);
+            logger.info("Section to extract: {} to {} (length: {})", startIndex, endIndex, endIndex - startIndex);
+            
+            String mainContent = htmlContent.substring(startIndex, endIndex);
+            logger.info("STEP 1: Extracted main content section, raw length: {}", mainContent.length());
+            logger.info("Main content starts with: {}", 
+                mainContent.length() > 200 ? mainContent.substring(0, 200) : mainContent);
+            logger.info("Main content ends with: {}", 
+                mainContent.length() > 200 ? mainContent.substring(mainContent.length() - 200) : mainContent);
+            
+            // Remove HTML tags but preserve ruby annotations structure
+            String beforeTagReplacement = mainContent;
+            mainContent = mainContent.replaceAll("<br\\s*/?>", "\n");
+            mainContent = mainContent.replaceAll("<p[^>]*>", "\n");
+            mainContent = mainContent.replaceAll("</p>", "\n");
+            mainContent = mainContent.replaceAll("<div[^>]*>", "\n");
+            mainContent = mainContent.replaceAll("</div>", "\n");
+            
+            logger.info("STEP 2: After basic tag replacement, length: {} (was: {})", 
+                mainContent.length(), beforeTagReplacement.length());
+            
+            // Handle ruby annotations - keep the base text and pronunciation
+            String beforeRubyProcessing = mainContent;
+            mainContent = mainContent.replaceAll("<ruby><rb>([^<]+)</rb><rp>[^<]*</rp><rt>([^<]+)</rt><rp>[^<]*</rp></ruby>", "$1($2)");
+            
+            logger.info("STEP 3: After ruby processing, length: {} (was: {})", 
+                mainContent.length(), beforeRubyProcessing.length());
+            
+            // Remove remaining HTML tags and entities
+            String beforeHTMLRemoval = mainContent;
+            mainContent = mainContent.replaceAll("<[^>]+>", "");
+            mainContent = mainContent.replaceAll("&nbsp;", " ");
+            mainContent = mainContent.replaceAll("&[a-zA-Z]+;", "");
+            
+            logger.info("STEP 4: After all HTML removal, length: {} (was: {})", 
+                mainContent.length(), beforeHTMLRemoval.length());
+            
+            // Clean up whitespace and line breaks more carefully
+            String beforeWhitespaceCleanup = mainContent;
+            mainContent = mainContent.replaceAll("　+", "　"); // Clean up multiple Japanese spaces
+            mainContent = mainContent.replaceAll("[ \\t]+", " "); // Clean up spaces/tabs but preserve newlines
+            mainContent = mainContent.replaceAll("\\n\\s*\\n+", "\n\n"); // Normalize multiple newlines
+            mainContent = mainContent.replaceAll("^\\s+", ""); // Remove leading whitespace
+            
+            logger.info("STEP 5: After whitespace cleaning, length: {} (was: {})", 
+                mainContent.length(), beforeWhitespaceCleanup.length());
+            
+            String result = mainContent.trim();
+            logger.info("STEP 6: Final extracted text length after trim: {}", result.length());
+            logger.info("Final text starts with: {}", 
+                result.length() > 200 ? result.substring(0, 200) : result);
+            logger.info("Final text ends with: {}", 
+                result.length() > 200 ? result.substring(result.length() - 200) : result);
+            logger.info("=== HTML EXTRACTION DEBUG END ===");
+            
+            return result;
+        }
+        
+        logger.warn("Could not find main_text div, trying to extract from body");
+        
+        // Fallback: extract everything between body tags
+        int bodyStart = htmlContent.indexOf("<body>");
+        int bodyEnd = htmlContent.indexOf("</body>");
+        if (bodyStart != -1 && bodyEnd != -1) {
+            String bodyContent = htmlContent.substring(bodyStart, bodyEnd);
+            
+            // Remove all HTML tags
+            bodyContent = bodyContent.replaceAll("<[^>]+>", " ");
+            bodyContent = bodyContent.replaceAll("\\s+", " ");
+            
+            return bodyContent.trim();
+        }
+        
+        return "";
+    }
+    
+    /**
+     * Check if HTML file has structured chapter organization
+     * Looks for Aozora Bunko heading patterns
+     * 
+     * @param htmlPath Path to the HTML file
+     * @return true if the HTML has chapter structure, false otherwise
+     */
+    private boolean hasChapterStructure(String htmlPath) {
+        try (InputStream stream = new FileInputStream(new File(htmlPath))) {
+            // Read the HTML content to look for chapter markers
+            String content = new String(stream.readAllBytes(), "Shift_JIS");
+            
+            // Look for Aozora Bunko chapter patterns
+            boolean hasMainChapters = content.contains("o-midashi") || content.contains("<h3");
+            boolean hasSubChapters = content.contains("naka-midashi") || content.contains("<h4");
+            boolean hasChapterAnchors = content.contains("midashi_anchor");
+            
+            logger.info("Chapter structure analysis for {}: mainChapters={}, subChapters={}, anchors={}", 
+                htmlPath, hasMainChapters, hasSubChapters, hasChapterAnchors);
+            
+            // Consider it structured if it has main chapters or multiple subsections
+            boolean result = hasMainChapters || (hasSubChapters && hasChapterAnchors);
+            logger.info("File {} has chapter structure: {}", htmlPath, result);
+            return result;
+            
+        } catch (Exception e) {
+            logger.warn("Could not analyze HTML structure for {}: {}", htmlPath, e.getMessage());
+            // Default to simple processing if we can't analyze
+            return false;
+        }
+    }
+    
+    /**
      * Clean and normalize extracted text
      * 
      * @param text Raw text from PDF
      * @return Cleaned text
      */
     private String cleanText(String text) {
+        logger.info("cleanText - input length: {}", text.length());
+        
         // Remove multiple consecutive newlines
         text = text.replaceAll("\\n{3,}", "\n\n");
         
         // Remove page numbers that appear alone on lines (common in books)
         text = text.replaceAll("(?m)^\\s*\\d+\\s*$", "");
         
-        // Normalize spaces (remove multiple spaces)
-        text = text.replaceAll("\\s{2,}", " ");
+        // Normalize spaces (remove multiple spaces but preserve newlines)
+        text = text.replaceAll("[ \\t]{2,}", " ");
         
         // Trim each line
         String[] lines = text.split("\n");
@@ -168,7 +377,9 @@ public class DocumentProcessingService {
             }
         }
         
-        return cleaned.toString().trim();
+        String result = cleaned.toString().trim();
+        logger.info("cleanText - output length: {}", result.length());
+        return result;
     }
     
     /**
@@ -179,31 +390,37 @@ public class DocumentProcessingService {
      * @return List of chunk entities
      */
     private List<Chunk> createChunks(String text, Book book) {
+        logger.info("=== CHUNKING DEBUG START ===");
+        logger.info("Input text length for chunking: {}", text.length());
+        logger.info("Text starts with: {}", 
+            text.length() > 200 ? text.substring(0, 200) : text);
+        logger.info("Text ends with: {}", 
+            text.length() > 200 ? text.substring(text.length() - 200) : text);
+        
         List<Chunk> chunks = new ArrayList<>();
         
         // Calculate chunk size in characters
         int chunkSizeChars = CHUNK_SIZE * CHARS_PER_TOKEN;
         int overlapChars = OVERLAP_SIZE * CHARS_PER_TOKEN;
         
+        logger.info("Chunk size: {} chars, Overlap: {} chars", chunkSizeChars, overlapChars);
+        
         int textLength = text.length();
         int chunkNumber = 0;
+        int totalCharactersProcessed = 0;
         
-        for (int start = 0; start < textLength; start += (chunkSizeChars - overlapChars)) {
-            int end = Math.min(start + chunkSizeChars, textLength);
+        int currentStart = 0;
+        while (currentStart < textLength) {
+            int end = Math.min(currentStart + chunkSizeChars, textLength);
             
-            // Don't create tiny chunks at the end
-            if (end - start < overlapChars && start > 0) {
-                break;
-            }
-            
-            String chunkText = text.substring(start, end);
+            String chunkText = text.substring(currentStart, end);
             
             // Try to break at a sentence boundary
             if (end < textLength) {
                 int lastPeriod = chunkText.lastIndexOf("。");
                 if (lastPeriod > chunkSizeChars * 0.8) {
-                    end = start + lastPeriod + 1;
-                    chunkText = text.substring(start, end);
+                    end = currentStart + lastPeriod + 1;
+                    chunkText = text.substring(currentStart, end);
                 }
             }
             
@@ -212,17 +429,34 @@ public class DocumentProcessingService {
             chunk.setBook(book);
             chunk.setContent(chunkText);
             chunk.setChapter(estimateChapter(chunkText, chunkNumber));
-            chunk.setPageNum(estimatePage(start, textLength));
-            chunk.setMetadata(createMetadata(chunkNumber, start, end));
+            chunk.setPageNum(estimatePage(currentStart, textLength));
+            chunk.setMetadata(createMetadata(chunkNumber, currentStart, end));
+            
+            totalCharactersProcessed += chunkText.length();
+            
+            logger.info("Chunk {}: start={}, end={}, length={}, chars processed so far: {}", 
+                chunkNumber, currentStart, end, chunkText.length(), totalCharactersProcessed);
+            logger.info("Chunk {} content sample: {}", chunkNumber, 
+                chunkText.length() > 100 ? chunkText.substring(0, 100) : chunkText);
             
             chunks.add(chunk);
             chunkNumber++;
             
-            // Adjust start position if we broke at sentence boundary
+            // Calculate next start position
             if (end < textLength && text.charAt(end - 1) == '。') {
-                start = end - overlapChars;
+                // If we broke at sentence boundary, start next chunk with overlap from that point
+                currentStart = end - overlapChars;
+            } else {
+                // Normal progression with overlap
+                currentStart = currentStart + (chunkSizeChars - overlapChars);
             }
         }
+        
+        logger.info("=== CHUNKING SUMMARY ===");
+        logger.info("Total chunks created: {}", chunks.size());
+        logger.info("Total characters in input: {}", textLength);
+        logger.info("Total characters processed across all chunks: {}", totalCharactersProcessed);
+        logger.info("=== CHUNKING DEBUG END ===");
         
         return chunks;
     }
@@ -374,10 +608,8 @@ public class DocumentProcessingService {
         for (int start = 0; start < chapterLength; start += (chunkSizeChars - overlapChars)) {
             int end = Math.min(start + chunkSizeChars, chapterLength);
             
-            // Don't create tiny chunks
-            if (end - start < overlapChars && start > 0) {
-                break;
-            }
+            // Always preserve content - don't discard remaining text
+            // Small chunks at the end are better than lost content
             
             String chunkText = text.substring(start, end);
             
@@ -419,6 +651,261 @@ public class DocumentProcessingService {
         }
         
         return chunks;
+    }
+    
+    /**
+     * Process HTML file with chapter structure awareness
+     * Extracts chapters based on Aozora Bunko heading patterns
+     * 
+     * @param htmlPath Path to the HTML file
+     * @param book Book entity
+     * @return List of chunks organized by chapters
+     */
+    private List<Chunk> processHTMLWithChapters(String htmlPath, Book book) {
+        logger.info("=== HTML CHAPTER PROCESSING START for {} ===", htmlPath);
+        List<Chunk> allChunks = new ArrayList<>();
+        
+        try {
+            // Read the HTML content with proper encoding
+            String content = readHTMLWithEncoding(htmlPath);
+            logger.info("Read HTML content for chapter processing, length: {}", content.length());
+            
+            // Extract chapter structure
+            List<HTMLChapter> chapters = extractChaptersFromHTML(content);
+            logger.info("Extracted {} chapters from HTML", chapters.size());
+            
+            // Process each chapter
+            for (int i = 0; i < chapters.size(); i++) {
+                HTMLChapter chapter = chapters.get(i);
+                logger.info("Processing chapter {}: '{}' with {} chars of content", 
+                    i + 1, chapter.title, chapter.cleanedContent != null ? chapter.cleanedContent.length() : 0);
+                List<Chunk> chapterChunks = createChunksFromHTMLChapter(chapter, book, i + 1);
+                allChunks.addAll(chapterChunks);
+                logger.info("Created {} chunks from chapter: {}", 
+                    chapterChunks.size(), chapter.title);
+            }
+            
+            // Log total characters processed
+            long totalChars = allChunks.stream()
+                .mapToLong(chunk -> chunk.getContent().length())
+                .sum();
+            logger.info("=== HTML CHAPTER PROCESSING END: Created {} chunks with {} total chars ===", 
+                allChunks.size(), totalChars);
+            
+        } catch (Exception e) {
+            logger.error("Error processing HTML with chapters: {}", e.getMessage(), e);
+            // Fall back to non-chapter processing
+            logger.info("Falling back to standard HTML processing");
+            try {
+                String fullText = extractTextFromHTML(htmlPath);
+                return createChunks(fullText, book);
+            } catch (IOException ioe) {
+                throw new RuntimeException("Failed to process HTML", ioe);
+            }
+        }
+        
+        return allChunks;
+    }
+    
+    /**
+     * Read HTML content with proper encoding detection
+     * 
+     * @param htmlPath Path to HTML file
+     * @return Raw HTML content as string
+     * @throws IOException if file cannot be read
+     */
+    private String readHTMLWithEncoding(String htmlPath) throws IOException {
+        File htmlFile = new File(htmlPath);
+        
+        try (InputStream stream = new FileInputStream(htmlFile)) {
+            byte[] bytes = stream.readAllBytes();
+            
+            // First, try to read as UTF-8 to check for charset declaration
+            String utf8Content = new String(bytes, "UTF-8");
+            
+            // Look for charset declaration in HTML meta tag
+            if (utf8Content.contains("charset=Shift_JIS") || utf8Content.contains("charset=\"Shift_JIS\"")) {
+                logger.debug("Detected Shift_JIS encoding from HTML meta tag");
+                String shiftJisContent = new String(bytes, "Shift_JIS");
+                logger.debug("Successfully read file with Shift_JIS encoding, content length: {}", shiftJisContent.length());
+                return shiftJisContent;
+            } else if (utf8Content.contains("charset=UTF-8") || utf8Content.contains("charset=\"UTF-8\"")) {
+                logger.debug("Detected UTF-8 encoding from HTML meta tag");
+                return utf8Content;
+            } else {
+                // For Aozora Bunko files, try Shift_JIS by default
+                try {
+                    String shiftJisContent = new String(bytes, "Shift_JIS");
+                    // Check if we get readable Japanese characters
+                    if (shiftJisContent.contains("」") || shiftJisContent.contains("「") || 
+                        shiftJisContent.contains("死") || shiftJisContent.contains("問題")) {
+                        logger.debug("Using Shift_JIS encoding (detected readable Japanese characters)");
+                        return shiftJisContent;
+                    }
+                } catch (Exception e) {
+                    logger.debug("Shift_JIS decoding failed: {}", e.getMessage());
+                }
+                
+                // Fall back to UTF-8
+                logger.debug("Using UTF-8 encoding (fallback)");
+                return utf8Content;
+            }
+        }
+    }
+    
+    /**
+     * Extract chapter structure from HTML content
+     * 
+     * @param htmlContent Raw HTML content
+     * @return List of chapters with titles and content
+     */
+    private List<HTMLChapter> extractChaptersFromHTML(String htmlContent) {
+        List<HTMLChapter> chapters = new ArrayList<>();
+        
+        // Simple regex-based extraction for Aozora Bunko format
+        // Look for main chapters (o-midashi)
+        String chapterPattern = "<h3[^>]*class=\"o-midashi\"[^>]*>.*?<a[^>]*id=\"([^\"]+)\"[^>]*>([^<]+)</a>.*?</h3>";
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(chapterPattern, java.util.regex.Pattern.DOTALL);
+        java.util.regex.Matcher matcher = pattern.matcher(htmlContent);
+        
+        int lastEnd = 0;
+        int chapterNum = 1;
+        
+        while (matcher.find()) {
+            String anchorId = matcher.group(1);
+            String title = matcher.group(2).trim();
+            int chapterStart = matcher.start();
+            
+            // If this isn't the first chapter, finalize the previous one
+            if (!chapters.isEmpty()) {
+                HTMLChapter prevChapter = chapters.get(chapters.size() - 1);
+                prevChapter.content = htmlContent.substring(prevChapter.startPos, chapterStart);
+                prevChapter.cleanedContent = extractTextFromHTMLSnippet(prevChapter.content);
+            }
+            
+            // Create new chapter
+            HTMLChapter chapter = new HTMLChapter();
+            chapter.title = title;
+            chapter.anchorId = anchorId;
+            chapter.startPos = chapterStart;
+            chapter.chapterNumber = chapterNum++;
+            
+            chapters.add(chapter);
+        }
+        
+        // Handle the last chapter
+        if (!chapters.isEmpty()) {
+            HTMLChapter lastChapter = chapters.get(chapters.size() - 1);
+            lastChapter.content = htmlContent.substring(lastChapter.startPos);
+            lastChapter.cleanedContent = extractTextFromHTMLSnippet(lastChapter.content);
+        }
+        
+        // If no main chapters found, create a single chapter from the main content
+        if (chapters.isEmpty()) {
+            HTMLChapter singleChapter = new HTMLChapter();
+            singleChapter.title = "全文";
+            singleChapter.chapterNumber = 1;
+            singleChapter.content = htmlContent;
+            singleChapter.cleanedContent = extractTextFromHTMLSnippet(htmlContent);
+            chapters.add(singleChapter);
+        }
+        
+        return chapters;
+    }
+    
+    /**
+     * Extract clean text from HTML snippet using Tika
+     * 
+     * @param htmlSnippet Raw HTML content
+     * @return Clean text content
+     */
+    private String extractTextFromHTMLSnippet(String htmlSnippet) {
+        try {
+            BodyContentHandler handler = new BodyContentHandler(-1);
+            AutoDetectParser parser = new AutoDetectParser();
+            Metadata metadata = new Metadata();
+            ParseContext context = new ParseContext();
+            
+            try (InputStream stream = new java.io.ByteArrayInputStream(htmlSnippet.getBytes("Shift_JIS"))) {
+                parser.parse(stream, handler, metadata, context);
+                return cleanText(handler.toString());
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to extract text from HTML snippet: {}", e.getMessage());
+            // Fall back to simple tag removal
+            return htmlSnippet.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+        }
+    }
+    
+    /**
+     * Create chunks from HTML chapter
+     * 
+     * @param chapter HTML chapter with content
+     * @param book Book entity
+     * @param chapterNumber Chapter number
+     * @return List of chunks from this chapter
+     */
+    private List<Chunk> createChunksFromHTMLChapter(HTMLChapter chapter, Book book, int chapterNumber) {
+        List<Chunk> chunks = new ArrayList<>();
+        
+        String text = chapter.cleanedContent;
+        int chunkSizeChars = CHUNK_SIZE * CHARS_PER_TOKEN;
+        int overlapChars = OVERLAP_SIZE * CHARS_PER_TOKEN;
+        
+        int chapterLength = text.length();
+        int chunkNumberInChapter = 0;
+        
+        for (int start = 0; start < chapterLength; start += (chunkSizeChars - overlapChars)) {
+            int end = Math.min(start + chunkSizeChars, chapterLength);
+            
+            // Try to break at sentence boundaries for Japanese text
+            if (end < chapterLength) {
+                int lastSentence = text.lastIndexOf('。', end);
+                if (lastSentence > start + (chunkSizeChars / 2)) {
+                    end = lastSentence + 1;
+                }
+            }
+            
+            Chunk chunk = new Chunk();
+            chunk.setContent(text.substring(start, end));
+            chunk.setBook(book);
+            chunk.setUploadedToPinecone(false);
+            
+            // Set chapter information
+            chunk.setChapter(chapter.title);
+            chunk.setChapterNumber(chapterNumber);
+            
+            // Calculate position information
+            int percentage = (int) ((double) start / chapterLength * 100);
+            chunk.setChapterPercentage(percentage);
+            chunk.setChapterPosition(start);
+            
+            // Enhanced metadata for HTML chapters
+            chunk.setMetadata(String.format(
+                "{\"chunk_number\": %d, \"chapter\": %d, \"chapter_title\": \"%s\", \"anchor_id\": \"%s\", \"position_in_chapter\": %d, \"percentage\": %d}",
+                chunkNumberInChapter, chapterNumber, 
+                chapter.title.replace("\"", "\\\""), 
+                chapter.anchorId != null ? chapter.anchorId : "",
+                start, percentage
+            ));
+            
+            chunks.add(chunk);
+            chunkNumberInChapter++;
+        }
+        
+        return chunks;
+    }
+    
+    /**
+     * Inner class to represent HTML chapter structure
+     */
+    private static class HTMLChapter {
+        String title;
+        String anchorId;
+        String content;
+        String cleanedContent;
+        int startPos;
+        int chapterNumber;
     }
     
 }

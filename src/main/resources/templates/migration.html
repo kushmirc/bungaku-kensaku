@@ -95,6 +95,18 @@
             <p class="loading">Loading books...</p>
         </div>
         
+        <h2 style="margin-top: 40px;">🔍 Test HTML Extraction</h2>
+        <div class="book-card" style="background: #fff9c4;">
+            <p><strong>Debug Tool:</strong> Test HTML extraction directly to see where content is being lost.</p>
+            <p>Upload the problematic HTML file to see detailed extraction results:</p>
+            <input type="file" id="testHTMLFile" accept=".html,.htm" style="margin: 10px 0;">
+            <br>
+            <button onclick="testHTMLExtraction()" style="background: #ffc107; color: #000;">
+                🔍 Test HTML Extraction
+            </button>
+            <div id="testHTMLResult"></div>
+        </div>
+        
         <h2 style="margin-top: 40px;">🚀 Generate Embeddings</h2>
         <div class="book-card" style="background: #e8f4fd;">
             <p>After reprocessing books, generate embeddings for semantic search:</p>
@@ -196,8 +208,8 @@
                                 '<span class="success">✅ Full content extracted</span>'}
                         </div>
                         <div class="upload-section">
-                            <p>Upload the EPUB file to reprocess with full extraction:</p>
-                            <input type="file" id="file-${book.id}" accept=".epub">
+                            <p>Upload the file to reprocess with full extraction:</p>
+                            <input type="file" id="file-${book.id}" accept=".epub,.html,.htm,.pdf">
                             <br>
                             <button onclick="reprocessBook(${book.id})">Reprocess Book</button>
                             <div id="result-${book.id}"></div>
@@ -217,7 +229,7 @@
             const file = fileInput.files[0];
             
             if (!file) {
-                alert('Please select the EPUB file for this book');
+                alert('Please select the file for this book');
                 return;
             }
             
@@ -371,6 +383,65 @@
                         Index vectors after: ${data.indexStatsAfter?.totalVectorCount || 'N/A'}<br>
                         <br>
                         ${data.message}
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+        
+        async function testHTMLExtraction() {
+            const fileInput = document.getElementById('testHTMLFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select an HTML file to test');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('testHTMLResult');
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '<span class="loading">⏳ Testing HTML extraction...</span>';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/migration/test-html-extraction', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ Extraction Test Complete!</span><br>
+                        <strong>File:</strong> ${data.originalFilename}<br>
+                        <strong>Raw HTML Length:</strong> ${data.rawHTMLLength.toLocaleString()} chars<br>
+                        <strong>Extracted Text Length:</strong> ${data.extractedTextLength.toLocaleString()} chars<br>
+                        <strong>Contains main_text div:</strong> ${data.containsMainTextDiv ? '✅ Yes' : '❌ No'}<br>
+                        <strong>Contains Japanese text:</strong> ${data.containsJapaneseText ? '✅ Yes' : '❌ No'}<br>
+                        <strong>Estimated chunks if processed:</strong> ${data.estimatedChunksIfProcessed}<br>
+                        <br>
+                        <strong>Raw HTML Sample (first 1000 chars):</strong><br>
+                        <div style="background: #f0f0f0; padding: 10px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                            ${data.rawHTMLSample.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                        </div>
+                        <br>
+                        <strong>Extracted Text Sample (first 1000 chars):</strong><br>
+                        <div style="background: #f0f0f0; padding: 10px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;">
+                            ${data.extractedTextSample}
+                        </div>
+                        <br>
+                        <details>
+                            <summary><strong>Full Extracted Text (click to expand)</strong></summary>
+                            <div style="background: #f0f0f0; padding: 10px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; white-space: pre-wrap;">
+                                ${data.extractedTextFull}
+                            </div>
+                        </details>
                     `;
                 } else {
                     resultDiv.innerHTML = `<span class="error">❌ Error: ${data.error}</span>`;

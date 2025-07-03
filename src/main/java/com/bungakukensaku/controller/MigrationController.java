@@ -518,6 +518,64 @@ public class MigrationController {
     }
     
     /**
+     * Test HTML extraction directly without chunking
+     * This helps debug where content is being lost in the extraction process
+     */
+    @PostMapping("/test-html-extraction")
+    public Map<String, Object> testHTMLExtraction(@RequestParam("file") MultipartFile file) {
+        Map<String, Object> result = new HashMap<>();
+        
+        try {
+            // Save uploaded file temporarily
+            String originalFilename = file.getOriginalFilename();
+            if (!originalFilename.toLowerCase().endsWith(".html") && !originalFilename.toLowerCase().endsWith(".htm")) {
+                result.put("success", false);
+                result.put("error", "Only HTML files are supported for this test");
+                return result;
+            }
+            
+            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            Path tempFile = Files.createTempFile("test-html-", extension);
+            Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+            
+            logger.info("Testing HTML extraction for file: {}", originalFilename);
+            
+            // Use reflection to access the private method for testing
+            java.lang.reflect.Method readHTMLMethod = DocumentProcessingService.class.getDeclaredMethod("readHTMLWithEncoding", String.class);
+            readHTMLMethod.setAccessible(true);
+            String htmlContent = (String) readHTMLMethod.invoke(documentProcessingService, tempFile.toString());
+            
+            java.lang.reflect.Method extractHTMLMethod = DocumentProcessingService.class.getDeclaredMethod("extractTextFromHTMLSimple", String.class);
+            extractHTMLMethod.setAccessible(true);
+            String extractedText = (String) extractHTMLMethod.invoke(documentProcessingService, htmlContent);
+            
+            // Return detailed extraction results
+            result.put("success", true);
+            result.put("originalFilename", originalFilename);
+            result.put("rawHTMLLength", htmlContent.length());
+            result.put("extractedTextLength", extractedText.length());
+            result.put("rawHTMLSample", htmlContent.length() > 1000 ? htmlContent.substring(0, 1000) : htmlContent);
+            result.put("extractedTextSample", extractedText.length() > 1000 ? extractedText.substring(0, 1000) : extractedText);
+            result.put("extractedTextFull", extractedText); // Full text for analysis
+            
+            // Basic analysis
+            result.put("containsMainTextDiv", htmlContent.contains("<div class=\"main_text\">"));
+            result.put("containsJapaneseText", extractedText.matches(".*[\\u3040-\\u309F\\u30A0-\\u30FF\\u4E00-\\u9FAF].*"));
+            result.put("estimatedChunksIfProcessed", (extractedText.length() / 1500) + 1);
+            
+            // Clean up
+            Files.deleteIfExists(tempFile);
+            
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("error", e.getMessage());
+            logger.error("Error testing HTML extraction", e);
+        }
+        
+        return result;
+    }
+    
+    /**
      * Run database migration to add uploaded_to_pinecone column
      * NOTE: This migration has been completed as of 2025-05-28
      * Keeping this endpoint for reference/future migrations
