@@ -200,6 +200,7 @@ public class SearchController {
                     if (chunk.isPresent()) {
                         item.setChunkId(chunkId);
                         item.setBookId(chunk.get().getBook().getId());
+                        item.setAuthor(chunk.get().getBook().getAuthor());
                         
                         // Generate detailed source reference
                         try {

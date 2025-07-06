@@ -52,7 +52,7 @@
                                 </label>
                                 <label class="radio-option">
                                     <input type="radio" name="searchScope" value="specific" th:checked="${searchScope == 'specific'}">
-                                    <span>書籍・シリーズから選択</span>
+                                    <span>作家から選択</span>
                                 </label>
                             </div>
                         </div>
@@ -106,7 +106,10 @@
                     </div>
                     <div th:each="result : ${results}" class="search-result-item">
                         <div class="result-header">
-                            <h4 class="book-title" th:text="${result.bookTitle}"></h4>
+                            <h4 class="book-title">
+                                <span th:text="${result.bookTitle}"></span>
+                                <span class="book-author" th:if="${result.author}" th:text="${' • ' + result.author}"></span>
+                            </h4>
                             <span class="result-score" th:text="|関連度: ${#numbers.formatDecimal(result.score * 100, 1, 1)}%|"></span>
                         </div>
                         <div class="result-metadata">

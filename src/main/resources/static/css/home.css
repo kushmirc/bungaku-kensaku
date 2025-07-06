@@ -517,6 +517,13 @@ main {
     margin: 0;
 }
 
+.book-author {
+    font-size: 1rem;
+    color: #6c757d;
+    font-weight: normal;
+    font-style: italic;
+}
+
 .result-score {
     font-size: 0.85rem;
     color: #6c757d;

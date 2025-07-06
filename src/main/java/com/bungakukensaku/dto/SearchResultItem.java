@@ -7,6 +7,7 @@ public class SearchResultItem {
     private Float score;
     private String content;
     private String bookTitle;
+    private String author;
     private String chapter;
     private Long chunkId;
     private Long bookId;
@@ -35,6 +36,9 @@ public class SearchResultItem {
     
     public String getBookTitle() { return bookTitle; }
     public void setBookTitle(String bookTitle) { this.bookTitle = bookTitle; }
+    
+    public String getAuthor() { return author; }
+    public void setAuthor(String author) { this.author = author; }
     
     public String getChapter() { return chapter; }
     public void setChapter(String chapter) { this.chapter = chapter; }
