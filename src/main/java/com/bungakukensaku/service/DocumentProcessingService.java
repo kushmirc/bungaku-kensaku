@@ -990,7 +990,6 @@ public class DocumentProcessingService {
         html.append("        .chunk { margin: 1em 0; }\n");
         html.append("        .chunk-highlight { background-color: #ffffcc; padding: 0.5em; border-radius: 4px; }\n");
         html.append("        .chapter-title { font-size: 1.5em; font-weight: bold; margin: 2em 0 1em 0; color: #2c5aa0; }\n");
-        html.append("        .back-button { position: fixed; bottom: 20px; right: 20px; background: #2c5aa0; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; }\n");
         html.append("    </style>\n");
         html.append("</head>\n");
         html.append("<body>\n");
@@ -1035,7 +1034,6 @@ public class DocumentProcessingService {
         }
         
         html.append("    </div>\n");
-        html.append("    <a href=\"javascript:history.back()\" class=\"back-button\">検索結果に戻る</a>\n");
         html.append("    <script>\n");
         html.append("        // Highlight and scroll to chunk if specified in URL hash\n");
         html.append("        window.addEventListener('load', function() {\n");
