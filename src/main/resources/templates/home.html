@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>池田先生指導検索 - 池田先生の著作検索システム</title>
+    <title>近代日本文学知恵検索 - 日本作家の著作検索システム</title>
     <link rel="stylesheet" th:href="@{/css/home.css}">
 </head>
 <body>
     <header>
         <nav>
-            <div class="logo">先生指導検索</div>
+            <div class="logo">文学指導検索</div>
             <ul class="nav-links">
                 <li><a href="/">ホーム</a></li>
                 <li><a href="/overview">概要</a></li>
@@ -27,14 +27,14 @@
 
     <main>
         <section class="hero-section">
-            <h1 class="hero-title">池田先生著作検索システム</h1>
-            <p class="hero-subtitle">AIを利用して先生のご指導を検索いたします</p>
+            <h1 class="hero-title">近代日本文学知恵検索システム</h1>
+            <p class="hero-subtitle">AIを利用して日本作家の著作を検索いたします</p>
         </section>
 
         <section class="search-container" id="search-container">
             <div class="search-top-section">
                 <div class="vintage-illustration">
-                    <img th:src="@{/images/sensei_at_desk.png}" alt="学者" class="sensei-image">
+                    <img th:src="@{/images/rawpixel-japan-landscape.jpg}" alt="日本の風景" class="sensei-image">
                 </div>
                 <div class="search-form">
                     <form action="/search" method="post" id="search-form">

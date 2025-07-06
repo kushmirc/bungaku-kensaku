@@ -113,7 +113,7 @@
 <body>
     <header>
         <nav>
-            <div class="logo">先生指導検索</div>
+            <div class="logo">文学指導検索</div>
         </nav>
     </header>
 
@@ -121,7 +121,7 @@
         <div class="login-container">
             <div class="login-header">
                 <h1 class="login-title">ログイン</h1>
-                <p class="login-subtitle">池田先生著作検索システムにアクセス</p>
+                <p class="login-subtitle">日本文学検索システムにアクセス</p>
             </div>
             
             <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
@@ -142,9 +142,6 @@
                 <button type="submit" class="login-button">ログイン</button>
             </form>
             
-            <div class="login-footer">
-                <p>学会員のみがアクセス可能です</p>
-            </div>
         </div>
     </main>
 
