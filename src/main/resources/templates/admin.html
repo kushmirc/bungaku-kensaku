@@ -278,7 +278,14 @@
                 </thead>
                 <tbody>
                     <tr th:each="book : ${books}">
-                        <td th:text="${book.title}"></td>
+                        <td>
+                            <span th:text="${book.title}"></span>
+                            <button class="btn btn-edit edit-title-btn" style="margin-left: 10px; font-size: 12px; padding: 2px 6px;"
+                                    th:data-book-id="${book.id}"
+                                    th:data-book-title="${book.title}">
+                                編集
+                            </button>
+                        </td>
                         <td>
                             <span th:if="${book.series != null}" 
                                   class="series-badge" 
@@ -320,16 +327,25 @@
         <!-- Hidden forms for POST requests -->
         <form id="createSeriesForm" action="/admin/series/create" method="post" style="display: none;">
             <input type="hidden" name="seriesName" id="createSeriesName">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
         </form>
         
         <form id="assignSeriesForm" method="post" style="display: none;">
             <input type="hidden" name="seriesName" id="selectedSeriesName">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
         </form>
         
         <form id="removeSeriesForm" method="post" style="display: none;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
         </form>
         
         <form id="deleteSeriesForm" method="post" style="display: none;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        </form>
+        
+        <form id="updateTitleForm" method="post" style="display: none;">
+            <input type="hidden" name="newTitle" id="newTitleInput">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
         </form>
     </div>
     
@@ -346,6 +362,24 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeCreateSeriesModal()">キャンセル</button>
                 <button class="btn btn-assign" onclick="createNewSeries()">作成</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Title Modal -->
+    <div id="editTitleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>書籍タイトルを編集</h2>
+                <span class="close" onclick="closeEditTitleModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>現在のタイトル: <strong id="currentTitle"></strong></p>
+                <input type="text" id="editTitleInput" placeholder="新しいタイトルを入力..." class="modal-input">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditTitleModal()">キャンセル</button>
+                <button class="btn btn-edit" onclick="updateTitle()">更新</button>
             </div>
         </div>
     </div>
@@ -485,6 +519,13 @@
         .btn-create {
             background-color: #007bff;
             color: white;
+        }
+        
+        .btn-edit {
+            background-color: #17a2b8;
+            color: white;
+            font-size: 12px;
+            padding: 4px 8px;
         }
         
         .section-header {
@@ -637,12 +678,16 @@
         window.onclick = function(event) {
             const createModal = document.getElementById('createSeriesModal');
             const assignModal = document.getElementById('assignSeriesModal');
+            const editModal = document.getElementById('editTitleModal');
             
             if (event.target === createModal) {
                 closeCreateSeriesModal();
             }
             if (event.target === assignModal) {
                 closeAssignSeriesModal();
+            }
+            if (event.target === editModal) {
+                closeEditTitleModal();
             }
         }
         
@@ -709,6 +754,58 @@
                     deleteSeries(seriesName, bookCount);
                 });
             });
+            
+            // Event listeners for edit title buttons
+            document.querySelectorAll('.edit-title-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const bookId = this.dataset.bookId;
+                    const bookTitle = this.dataset.bookTitle;
+                    showEditTitleModal(bookId, bookTitle);
+                });
+            });
+        });
+        
+        // Edit title modal functions
+        let currentEditBookId = null;
+        
+        function showEditTitleModal(bookId, bookTitle) {
+            currentEditBookId = bookId;
+            document.getElementById('currentTitle').textContent = bookTitle;
+            document.getElementById('editTitleInput').value = bookTitle;
+            document.getElementById('editTitleModal').style.display = 'block';
+            document.getElementById('editTitleInput').focus();
+            document.getElementById('editTitleInput').select();
+        }
+        
+        function closeEditTitleModal() {
+            document.getElementById('editTitleModal').style.display = 'none';
+            document.getElementById('editTitleInput').value = '';
+            currentEditBookId = null;
+        }
+        
+        function updateTitle() {
+            const newTitle = document.getElementById('editTitleInput').value.trim();
+            if (!newTitle) {
+                alert('タイトルを入力してください。');
+                return;
+            }
+            
+            const form = document.getElementById('updateTitleForm');
+            form.action = '/admin/books/' + currentEditBookId + '/update-title';
+            document.getElementById('newTitleInput').value = newTitle;
+            form.submit();
+        }
+        
+        // Add Enter key support for edit title input
+        document.addEventListener('DOMContentLoaded', function() {
+            const editInput = document.getElementById('editTitleInput');
+            if (editInput) {
+                editInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        updateTitle();
+                    }
+                });
+            }
         });
     </script>
 </body>

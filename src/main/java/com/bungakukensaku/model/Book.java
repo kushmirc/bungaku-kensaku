@@ -40,6 +40,9 @@ public class Book {
     @Column(name = "s3_file_path")
     private String s3FilePath;
     
+    @Column(name = "static_text_path")
+    private String staticTextPath;
+    
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
@@ -99,6 +102,14 @@ public class Book {
     
     public void setS3FilePath(String s3FilePath) {
         this.s3FilePath = s3FilePath;
+    }
+    
+    public String getStaticTextPath() {
+        return staticTextPath;
+    }
+    
+    public void setStaticTextPath(String staticTextPath) {
+        this.staticTextPath = staticTextPath;
     }
     
     public LocalDateTime getCreatedAt() {

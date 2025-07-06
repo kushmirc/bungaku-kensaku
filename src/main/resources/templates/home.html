@@ -138,9 +138,17 @@
                         
                         <div class="result-actions">
                             <button class="expand-toggle" onclick="toggleExpand(this)">
-                                <span class="expand-text">全文を表示</span>
-                                <span class="collapse-text" style="display: none;">全文を隠す</span>
+                                <span class="expand-text">展開</span>
+                                <span class="collapse-text" style="display: none;">折りたたむ</span>
                             </button>
+                            <a th:if="${result.staticTextPath != null}" 
+                               th:data-path="${result.staticTextPath}"
+                               th:data-chunk="${result.chunkId}"
+                               href="#"
+                               onclick="openFullText(this); return false;"
+                               class="full-text-button">
+                                全文を読む
+                            </a>
                         </div>
                     </div>
                 </div>

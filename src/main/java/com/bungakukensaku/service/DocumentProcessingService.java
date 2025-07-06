@@ -21,6 +21,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,21 +66,22 @@ public class DocumentProcessingService {
     public List<Chunk> processDocument(String filePath, Book book) {
         logger.info("Starting to process document: {}", filePath);
         List<Chunk> chunks = new ArrayList<>();
+        String fullText = null;
         
         try {
-            String fullText;
-            
             // Determine file type and extract text accordingly
             if (filePath.toLowerCase().endsWith(".pdf")) {
                 logger.info("Processing as PDF file");
                 fullText = extractTextFromPDF(filePath);
                 logger.info("Extracted {} characters from PDF", fullText.length());
+                chunks = createChunks(fullText, book);
             } else if (filePath.toLowerCase().endsWith(".epub")) {
                 logger.info("Processing as EPUB file with chapter awareness");
                 // Use chapter-aware processing for EPUBs
                 chunks = processEPUBWithChapters(filePath, book);
                 logger.info("Created {} chunks from EPUB with chapter data", chunks.size());
-                return chunks; // Early return for EPUB
+                // For EPUB, reconstruct full text from chunks for HTML generation
+                fullText = reconstructFullTextFromChunks(chunks);
             } else if (filePath.toLowerCase().endsWith(".html") || filePath.toLowerCase().endsWith(".htm")) {
                 logger.info("Processing as HTML file: {}", filePath);
                 // Check if HTML has chapter structure for intelligent processing
@@ -87,19 +92,27 @@ public class DocumentProcessingService {
                     logger.info("HTML file has chapter structure - using chapter-aware processing");
                     chunks = processHTMLWithChapters(filePath, book);
                     logger.info("Created {} chunks from HTML with chapter data", chunks.size());
-                    return chunks; // Early return for structured HTML
+                    // For structured HTML, reconstruct full text from chunks
+                    fullText = reconstructFullTextFromChunks(chunks);
                 } else {
                     logger.info("HTML file is simple document - using text extraction");
                     fullText = extractTextFromHTML(filePath);
                     logger.info("Extracted {} characters from HTML", fullText.length());
+                    chunks = createChunks(fullText, book);
                 }
             } else {
                 throw new IllegalArgumentException("Unsupported file format. Only PDF, EPUB, and HTML are supported.");
             }
             
-            // Split into chunks with metadata
-            chunks = createChunks(fullText, book);
             logger.info("Created {} chunks from document", chunks.size());
+            
+            // Save full text as static HTML file - but chunks don't have IDs yet
+            // We'll need to regenerate after saving
+            if (fullText != null && book.getId() != null) {
+                String staticPath = saveFullTextAsHTML(fullText, chunks, book);
+                book.setStaticTextPath(staticPath);
+                logger.info("Saved full text to: {}", staticPath);
+            }
             
         } catch (IOException e) {
             logger.error("Error processing document: {}", e.getMessage(), e);
@@ -906,6 +919,215 @@ public class DocumentProcessingService {
         String cleanedContent;
         int startPos;
         int chapterNumber;
+    }
+    
+    /**
+     * Reconstruct full text from chunks (preserving order)
+     * Used when chunks were created with chapter awareness
+     * 
+     * @param chunks List of chunks in order
+     * @return Full text reconstructed from chunks
+     */
+    private String reconstructFullTextFromChunks(List<Chunk> chunks) {
+        StringBuilder fullText = new StringBuilder();
+        String lastChapter = "";
+        
+        for (Chunk chunk : chunks) {
+            // Add chapter header if we're entering a new chapter
+            if (chunk.getChapter() != null && !chunk.getChapter().equals(lastChapter)) {
+                if (fullText.length() > 0) {
+                    fullText.append("\n\n");
+                }
+                fullText.append("【").append(chunk.getChapter()).append("】\n\n");
+                lastChapter = chunk.getChapter();
+            }
+            
+            // Add chunk content
+            fullText.append(chunk.getContent());
+            
+            // Add some spacing between chunks
+            if (!chunk.getContent().endsWith("\n")) {
+                fullText.append("\n");
+            }
+        }
+        
+        return fullText.toString();
+    }
+    
+    /**
+     * Save full text as HTML file with chunk anchors
+     * 
+     * @param fullText The complete text of the book
+     * @param chunks List of chunks with position info
+     * @param book Book entity with metadata
+     * @return The static path to the saved HTML file
+     * @throws IOException if file cannot be saved
+     */
+    private String saveFullTextAsHTML(String fullText, List<Chunk> chunks, Book book) throws IOException {
+        // Create author directory path (ASCII-safe format using transliteration)
+        String authorDir = createAsciiSafeName(book.getAuthor());
+        
+        // Create the directory structure
+        Path booksDir = Paths.get("src/main/resources/static/books");
+        Path authorPath = booksDir.resolve(authorDir);
+        Files.createDirectories(authorPath);
+        
+        // Create filename using book title (ASCII-safe format)
+        String safeTitle = createAsciiSafeName(book.getTitle());
+        // Add book ID to ensure uniqueness
+        String filename = safeTitle + "-" + book.getId() + ".html";
+        Path filePath = authorPath.resolve(filename);
+        
+        // Generate HTML content with proper structure and chunk anchors
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>\n");
+        html.append("<html lang=\"ja\">\n");
+        html.append("<head>\n");
+        html.append("    <meta charset=\"UTF-8\">\n");
+        html.append("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.append("    <title>").append(escapeHtml(book.getTitle())).append("</title>\n");
+        html.append("    <style>\n");
+        html.append("        body { font-family: 'Noto Sans JP', sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 20px; }\n");
+        html.append("        .chunk { margin: 1em 0; }\n");
+        html.append("        .chunk-highlight { background-color: #ffffcc; padding: 0.5em; border-radius: 4px; }\n");
+        html.append("        .chapter-title { font-size: 1.5em; font-weight: bold; margin: 2em 0 1em 0; color: #2c5aa0; }\n");
+        html.append("        .back-button { position: fixed; bottom: 20px; right: 20px; background: #2c5aa0; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; }\n");
+        html.append("    </style>\n");
+        html.append("</head>\n");
+        html.append("<body>\n");
+        html.append("    <h1>").append(escapeHtml(book.getTitle())).append("</h1>\n");
+        html.append("    <p><strong>著者:</strong> ").append(escapeHtml(book.getAuthor())).append("</p>\n");
+        html.append("    <hr>\n");
+        html.append("    <div class=\"content\">\n");
+        
+        // Add content with chunk anchors
+        if (chunks != null && !chunks.isEmpty()) {
+            String currentChapter = "";
+            int currentPosition = 0;
+            
+            for (Chunk chunk : chunks) {
+                // Add chapter header if changed
+                if (chunk.getChapter() != null && !chunk.getChapter().equals(currentChapter)) {
+                    html.append("        <div class=\"chapter-title\">").append(escapeHtml(chunk.getChapter())).append("</div>\n");
+                    currentChapter = chunk.getChapter();
+                }
+                
+                // Add chunk anchor and content
+                html.append("        <div class=\"chunk\" id=\"chunk-").append(chunk.getId()).append("\">\n");
+                
+                // Convert text to HTML paragraphs
+                String[] paragraphs = chunk.getContent().split("\n\n");
+                for (String paragraph : paragraphs) {
+                    if (!paragraph.trim().isEmpty()) {
+                        html.append("            <p>").append(escapeHtml(paragraph.trim())).append("</p>\n");
+                    }
+                }
+                
+                html.append("        </div>\n");
+            }
+        } else {
+            // No chunks, just add the full text
+            String[] paragraphs = fullText.split("\n\n");
+            for (String paragraph : paragraphs) {
+                if (!paragraph.trim().isEmpty()) {
+                    html.append("        <p>").append(escapeHtml(paragraph.trim())).append("</p>\n");
+                }
+            }
+        }
+        
+        html.append("    </div>\n");
+        html.append("    <a href=\"javascript:history.back()\" class=\"back-button\">検索結果に戻る</a>\n");
+        html.append("    <script>\n");
+        html.append("        // Highlight and scroll to chunk if specified in URL hash\n");
+        html.append("        window.addEventListener('load', function() {\n");
+        html.append("            if (window.location.hash) {\n");
+        html.append("                const targetId = window.location.hash.substring(1);\n");
+        html.append("                const targetElement = document.getElementById(targetId);\n");
+        html.append("                if (targetElement) {\n");
+        html.append("                    targetElement.classList.add('chunk-highlight');\n");
+        html.append("                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });\n");
+        html.append("                }\n");
+        html.append("            }\n");
+        html.append("        });\n");
+        html.append("    </script>\n");
+        html.append("</body>\n");
+        html.append("</html>");
+        
+        // Write the HTML file
+        Files.write(filePath, html.toString().getBytes(StandardCharsets.UTF_8));
+        
+        // Return the web-accessible path
+        return "/books/" + authorDir + "/" + filename;
+    }
+    
+    /**
+     * Escape HTML special characters
+     * 
+     * @param text Text to escape
+     * @return HTML-safe text
+     */
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;");
+    }
+    
+    /**
+     * Create ASCII-safe filename from Japanese text
+     * Uses a simple romanization approach for common patterns
+     * 
+     * @param text Japanese text to convert
+     * @return ASCII-safe string
+     */
+    private String createAsciiSafeName(String text) {
+        if (text == null) return "unknown";
+        
+        // Common author name mappings
+        if (text.equals("新渡戸稲造")) return "nitobe-inazo";
+        if (text.equals("池田大作")) return "ikeda-daisaku";
+        
+        // For book titles, use a combination of ID and simplified name
+        // Remove all non-ASCII characters and clean up
+        String ascii = text.replaceAll("[^\\x00-\\x7F]", "")
+                          .replaceAll("[^a-zA-Z0-9]+", "-")
+                          .replaceAll("-+", "-")
+                          .replaceAll("^-|-$", "")
+                          .toLowerCase();
+        
+        // If nothing left after removing non-ASCII, use a default
+        if (ascii.isEmpty()) {
+            // Try to extract any numbers
+            String numbers = text.replaceAll("[^0-9]+", "");
+            if (!numbers.isEmpty()) {
+                return "book-" + numbers;
+            }
+            return "book";
+        }
+        
+        return ascii;
+    }
+    
+    /**
+     * Regenerate HTML file with proper chunk IDs after chunks have been saved
+     * 
+     * @param book Book entity with saved chunks
+     * @throws IOException if file cannot be saved
+     */
+    public void regenerateFullTextHTML(Book book) throws IOException {
+        if (book.getStaticTextPath() == null || book.getChunks() == null || book.getChunks().isEmpty()) {
+            logger.warn("Cannot regenerate HTML - no static path or chunks for book {}", book.getId());
+            return;
+        }
+        
+        // Reconstruct full text from chunks
+        String fullText = reconstructFullTextFromChunks(book.getChunks());
+        
+        // Regenerate HTML with proper chunk IDs
+        saveFullTextAsHTML(fullText, book.getChunks(), book);
+        logger.info("Regenerated HTML with chunk IDs for book {}", book.getId());
     }
     
 }

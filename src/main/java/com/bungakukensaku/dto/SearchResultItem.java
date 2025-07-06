@@ -14,6 +14,7 @@ public class SearchResultItem {
     private String contextSummary;
     private String relevanceExplanation;
     private String sourceReference;
+    private String staticTextPath;
     
     // Constructors
     public SearchResultItem() {}
@@ -57,4 +58,7 @@ public class SearchResultItem {
     
     public String getSourceReference() { return sourceReference; }
     public void setSourceReference(String sourceReference) { this.sourceReference = sourceReference; }
+    
+    public String getStaticTextPath() { return staticTextPath; }
+    public void setStaticTextPath(String staticTextPath) { this.staticTextPath = staticTextPath; }
 }

@@ -601,7 +601,6 @@ main {
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin-bottom: 0.75rem;
 }
 
 .expand-toggle:hover {
@@ -630,6 +629,24 @@ main {
     display: flex;
     gap: 1rem;
     margin-top: 1rem;
+    align-items: center;
+}
+
+.full-text-button {
+    background: #2c5aa0;
+    color: white;
+    text-decoration: none;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.full-text-button:hover {
+    background: #1e3f73;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(44, 90, 160, 0.3);
 }
 
 .view-context-link {

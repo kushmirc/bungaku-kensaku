@@ -177,4 +177,29 @@ public class AdminController {
         
         return "redirect:/admin";
     }
+
+    /**
+     * Update a book's title
+     */
+    @PostMapping("/books/{id}/update-title")
+    public String updateBookTitle(@PathVariable Long id, 
+                                @RequestParam String newTitle,
+                                RedirectAttributes redirectAttributes) {
+        try {
+            Book book = bookService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
+            
+            String oldTitle = book.getTitle();
+            book.setTitle(newTitle.trim());
+            bookService.save(book);
+            
+            redirectAttributes.addFlashAttribute("successMessage", 
+                    "Book title updated from \"" + oldTitle + "\" to \"" + newTitle.trim() + "\"");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", 
+                    "Failed to update title: " + e.getMessage());
+        }
+        
+        return "redirect:/admin";
+    }
 }

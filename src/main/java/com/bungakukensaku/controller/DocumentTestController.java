@@ -5,6 +5,8 @@ import com.bungakukensaku.model.Chunk;
 import com.bungakukensaku.repository.BookRepository;
 import com.bungakukensaku.repository.ChunkRepository;
 import com.bungakukensaku.service.DocumentProcessingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +35,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/test/document")
 public class DocumentTestController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(DocumentTestController.class);
     
     @Autowired
     private DocumentProcessingService documentProcessingService;
@@ -128,6 +132,21 @@ public class DocumentTestController {
             
             // Save chunks to database
             chunks = chunkRepository.saveAll(chunks);
+            
+            // Update book with static text path if it was set
+            if (book.getStaticTextPath() != null) {
+                book = bookRepository.save(book);
+                logger.info("Updated book with static text path: {}", book.getStaticTextPath());
+                
+                // Regenerate HTML with proper chunk IDs now that chunks are saved
+                try {
+                    book.setChunks(chunks); // Set saved chunks on book
+                    documentProcessingService.regenerateFullTextHTML(book);
+                    logger.info("Regenerated HTML with chunk IDs for book {}", book.getId());
+                } catch (IOException e) {
+                    logger.error("Failed to regenerate HTML with chunk IDs: {}", e.getMessage());
+                }
+            }
             
             // Calculate total character count
             long totalCharacters = chunks.stream()

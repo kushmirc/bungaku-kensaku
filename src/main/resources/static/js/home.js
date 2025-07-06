@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const helpText = `検索を開始するには：<br><br>
 1. 上の検索欄にご質問を入力してください<br>
-&nbsp;&nbsp;&nbsp;例えば、「先生は勇気についてどのようにおっしゃっていますか？」<br><br>
+&nbsp;&nbsp;&nbsp;例えば、「勇気についてどのようにおっしゃっていますか？」<br><br>
 2. 「検索」ボタンをクリックしてください`;
             
             resultsContent.innerHTML = helpText;
@@ -361,5 +361,18 @@ function toggleExpand(button) {
         resultContent.classList.add('collapsed');
         expandText.style.display = 'inline';
         collapseText.style.display = 'none';
+    }
+}
+
+// Open full text in new window with proper URL handling
+function openFullText(link) {
+    const path = link.getAttribute('data-path');
+    const chunkId = link.getAttribute('data-chunk');
+    
+    if (path && chunkId) {
+        // Construct the URL with the chunk anchor
+        const url = path + '#chunk-' + chunkId;
+        // Open in new window
+        window.open(url, '_blank');
     }
 }

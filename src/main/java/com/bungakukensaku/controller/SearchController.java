@@ -202,6 +202,9 @@ public class SearchController {
                         item.setBookId(chunk.get().getBook().getId());
                         item.setAuthor(chunk.get().getBook().getAuthor());
                         
+                        // Set static text path for full text viewing
+                        item.setStaticTextPath(chunk.get().getBook().getStaticTextPath());
+                        
                         // Generate detailed source reference
                         try {
                             String sourceRef = generateSourceReference(chunk.get());
