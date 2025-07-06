@@ -964,18 +964,17 @@ public class DocumentProcessingService {
      * @throws IOException if file cannot be saved
      */
     private String saveFullTextAsHTML(String fullText, List<Chunk> chunks, Book book) throws IOException {
-        // Create author directory path (ASCII-safe format using transliteration)
-        String authorDir = createAsciiSafeName(book.getAuthor());
+        // Create author directory path using actual Japanese name
+        String authorDir = book.getAuthor();
         
         // Create the directory structure
         Path booksDir = Paths.get("src/main/resources/static/books");
         Path authorPath = booksDir.resolve(authorDir);
         Files.createDirectories(authorPath);
         
-        // Create filename using book title (ASCII-safe format)
-        String safeTitle = createAsciiSafeName(book.getTitle());
+        // Create filename using actual Japanese book title
         // Add book ID to ensure uniqueness
-        String filename = safeTitle + "-" + book.getId() + ".html";
+        String filename = book.getTitle() + "-" + book.getId() + ".html";
         Path filePath = authorPath.resolve(filename);
         
         // Generate HTML content with proper structure and chunk anchors
