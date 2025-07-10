@@ -15,7 +15,7 @@ import jakarta.servlet.http.HttpSession;
 public class RateLimitingService {
     
     private static final String SEARCH_COUNT_KEY = "searchCount";
-    private static final int MAX_SEARCHES_PER_SESSION = 100;
+    private static final int MAX_SEARCHES_PER_SESSION = 3;
     
     /**
      * Check if a search request is allowed for this session

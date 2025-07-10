@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const helpText = `検索を開始するには：<br><br>
 1. 上の検索欄にご質問を入力してください<br>
-&nbsp;&nbsp;&nbsp;例えば、「勇気についてどのようにおっしゃっていますか？」<br><br>
+&nbsp;&nbsp;&nbsp;例えば、「人生の意味についてどのように描かれていますか？」<br><br>
 2. 「検索」ボタンをクリックしてください`;
             
             resultsContent.innerHTML = helpText;

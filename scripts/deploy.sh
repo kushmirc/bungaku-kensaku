@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Load environment variables
-source /opt/sensei-search/.env
+source /opt/bungaku-kensaku/.env
 
-# Sensei Search Deployment Script
+# Bungaku Kensaku Deployment Script
 # Usage: ./deploy.sh
 
-APP_DIR="/opt/sensei-search"
+APP_DIR="/opt/bungaku-kensaku"
 LOG_DIR="$APP_DIR/logs"
-JAR_NAME="sensei-search.jar"
+JAR_NAME="bungaku-kensaku.jar"
 APP_PORT=8080
 PYTHON_PORT=8000
 

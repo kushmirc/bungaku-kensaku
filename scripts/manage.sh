@@ -1,19 +1,19 @@
 #!/bin/bash
 
-# Sensei Search Service Management Script
+# Bungaku Kensaku Service Management Script
 # Usage: ./manage.sh {start|stop|restart|status|logs|python-logs}
 
-APP_DIR="/opt/sensei-search"
+APP_DIR="/opt/bungaku-kensaku"
 LOG_DIR="$APP_DIR/logs"
 
 case "$1" in
     start)
-        echo "Starting Sensei Search services..."
+        echo "Starting Bungaku Kensaku services..."
         cd $APP_DIR
         ./scripts/deploy.sh
         ;;
     stop)
-        echo "Stopping Sensei Search services..."
+        echo "Stopping Bungaku Kensaku services..."
         if [ -f "$APP_DIR/app.pid" ]; then
             PID=$(cat $APP_DIR/app.pid)
             if ps -p $PID > /dev/null 2>&1; then
@@ -38,13 +38,13 @@ case "$1" in
         echo "All services stopped"
         ;;
     restart)
-        echo "Restarting Sensei Search services..."
+        echo "Restarting Bungaku Kensaku services..."
         $0 stop
         sleep 2
         $0 start
         ;;
     status)
-        echo "=== Sensei Search Service Status ==="
+        echo "=== Bungaku Kensaku Service Status ==="
         
         if [ -f "$APP_DIR/app.pid" ] && ps -p $(cat $APP_DIR/app.pid) > /dev/null 2>&1; then
             echo "✓ Java app: Running (PID: $(cat $APP_DIR/app.pid))"
@@ -81,7 +81,7 @@ case "$1" in
         tail -f $LOG_DIR/python-ai.log
         ;;
     *)
-        echo "Sensei Search Service Manager"
+        echo "Bungaku Kensaku Service Manager"
         echo ""
         echo "Usage: $0 {start|stop|restart|status|logs|python-logs}"
         echo ""
