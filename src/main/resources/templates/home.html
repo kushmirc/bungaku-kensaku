@@ -85,7 +85,7 @@
                 </div>
             </div>
             
-            <div class="search-results" th:style="${results != null and !results.isEmpty()} ? '' : 'display: none;'">
+            <div class="search-results" th:style="${(results != null and !results.isEmpty()) or message != null} ? '' : 'display: none;'">
                 <div class="results-header">
                     <h3>検索結果</h3>
                     <div class="results-info">
@@ -101,7 +101,9 @@
                     <button class="clear-results">クリア</button>
                 </div>
                 <div class="results-content">
-                    <div th:if="${results != null and results.isEmpty()}" class="search-message">
+                    <div th:if="${message != null}" class="search-message rate-limit-message" th:text="${message}">
+                    </div>
+                    <div th:if="${results != null and results.isEmpty() and message == null}" class="search-message">
                         検索結果が見つかりませんでした。
                     </div>
                     <div th:each="result : ${results}" class="search-result-item">

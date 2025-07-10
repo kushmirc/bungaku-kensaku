@@ -131,6 +131,59 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('.search-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     
+    // Function to show rate limit popup
+    function showRateLimitPopup() {
+        // Create popup overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        `;
+        
+        // Create popup content
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            text-align: center;
+        `;
+        
+        popup.innerHTML = `
+            <h3 style="color: #2c5aa0; margin-bottom: 15px;">検索制限に達しました</h3>
+            <p style="color: #333; margin-bottom: 20px;">セッションあたりの最大検索回数（3回）に達しました。新しいセッションを開始してください。</p>
+            <button style="
+                background-color: #2c5aa0;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+            " onclick="this.closest('div').parentElement.remove()">閉じる</button>
+        `;
+        
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+        
+        // Close popup when clicking overlay
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+    }
+
     // Handle form submission
     const searchForm = document.querySelector('#search-form');
     searchForm.addEventListener('submit', function(e) {
@@ -339,6 +392,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset height
             adjustTextareaHeight();
         });
+    }
+
+    // Check if rate limit message is present and show popup
+    const rateLimitMessage = document.querySelector('.rate-limit-message');
+    if (rateLimitMessage && rateLimitMessage.textContent.includes('セッションあたりの検索制限に達しました')) {
+        // Hide the entire results section
+        const resultsSection = document.querySelector('.search-results');
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
+        }
+        // Show the popup
+        showRateLimitPopup();
     }
 
 });
