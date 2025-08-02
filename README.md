@@ -1,8 +1,13 @@
 # 文学検索 (Bungaku Kensaku) - AI Literature Search Engine
 
-A multilingual AI-powered semantic search engine for Japanese Buddhist literature, featuring intelligent context-aware search results and natural language understanding.
+### <em>Video Walkthrough: </em>https://youtu.be/gMDcrrX8Tug
+<a href="https://youtu.be/gMDcrrX8Tug">
+<img width="3260" height="1926" alt="Bungaku Kensaku Screen" src="https://github.com/user-attachments/assets/c93015a8-bb64-4cf1-8018-feda711c6f2a"></a>
 
-## 🌟 Features
+## Summary
+A multilingual AI-powered semantic search engine for Japanese literature, featuring intelligent context-aware search results and natural language understanding.
+
+## Features
 
 - **Semantic Search**: AI-powered understanding of queries in both Japanese and English
 - **Context-Aware Results**: Each result includes intelligent summaries explaining relevance and context
@@ -11,7 +16,7 @@ A multilingual AI-powered semantic search engine for Japanese Buddhist literatur
 - **Vector Database**: Uses embeddings for sophisticated content matching beyond keyword search
 - **Scalable Architecture**: Designed to grow from 5 to 100+ books seamlessly
 
-## 🏗️ Architecture
+## Architecture
 
 ### Technology Stack
 - **Backend**: Java Spring Boot
@@ -26,18 +31,17 @@ A multilingual AI-powered semantic search engine for Japanese Buddhist literatur
 Frontend (Thymeleaf) → Spring Boot API → Vector Search Service → PostgreSQL
                                       ↘ Pinecone Vector DB
                                       ↘ OpenAI API (embeddings + summaries)
-                                      ↘ AWS S3 (document storage)
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Java 17+
 - Maven 3.6+
 - PostgreSQL 12+
 - API keys for:
-  - OpenAI (for embeddings and AI summaries)
-  - Pinecone (for vector search)
+- OpenAI (for embeddings and AI summaries)
+- Pinecone (for vector search)
 
 ### Installation
 
@@ -89,20 +93,20 @@ Frontend (Thymeleaf) → Spring Boot API → Vector Search Service → PostgreSQ
 
 ```
 src/main/java/com/senseisearch/
-├── controller/          # REST API endpoints
-├── service/            # Business logic (search, AI, document processing)
-├── repository/         # JPA data access layer
+├── controller/        # REST API endpoints
+├── service/           # Business logic (search, AI, document processing)
+├── repository/        # JPA data access layer
 ├── model/             # Entity classes
 ├── config/            # Configuration classes
 └── util/              # Utility classes
 
 src/main/resources/
-├── templates/         # Thymeleaf HTML templates
-├── static/           # CSS, JavaScript, images
+├── templates/               # Thymeleaf HTML templates
+├── static/                  # CSS, JavaScript, images
 └── application*.properties  # Configuration files
 ```
 
-## 🔍 How It Works
+## How It Works
 
 ### Document Processing Pipeline
 1. **PDF Upload**: Documents are uploaded and stored in PostgreSQL
@@ -118,7 +122,7 @@ src/main/resources/
 4. **AI Summary**: OpenAI generates intelligent explanations for each result
 5. **Result Presentation**: Clean, organized results with context and relevance explanations
 
-## 🎯 Use Cases
+## Use Cases
 
 - **Academic Research**: Deep exploration of philosophical and literary texts
 - **Study Groups**: Finding relevant passages for discussion topics
@@ -126,67 +130,6 @@ src/main/resources/
 - **Multilingual Access**: Non-Japanese speakers accessing Japanese literature
 - **Contextual Learning**: Understanding passages within their broader narrative context
 
-## 🛠️ Development
-
-### Key Design Principles
-- **Clean Architecture**: Service-oriented design with clear separation of concerns
-- **Scalability**: Built to handle growth from prototype to production scale
-- **Security**: No hardcoded credentials, environment-based configuration
-- **Maintainability**: Well-structured code with comprehensive documentation
-
-### Development Setup
-```bash
-# Development mode with hot reload
-mvn spring-boot:run -Dspring.profiles.active=local
-
-# Run tests
-mvn test
-
-# Build production JAR
-mvn clean package -Pproduction
-```
-
-## 📊 Technical Highlights
-
-- **Intelligent Chunking**: Smart text segmentation preserving context boundaries
-- **Hierarchical Context**: AI understanding at multiple levels (series → book → chapter → passage)
-- **Cost-Effective AI**: Strategic use of OpenAI API for custom LLM-like results
-- **Multilingual Embeddings**: Support for cross-language semantic search
-- **Responsive Design**: Mobile-friendly interface with accessibility considerations
-
-## 🔐 Security & Privacy
-
-- Environment-based configuration (no secrets in code)
-- Secure credential management
-- Production-ready security headers
-- Input validation and sanitization
-
-## 📈 Future Enhancements
-
-- [ ] Advanced filtering (date range, topic, sentiment)
-- [ ] User accounts and search history
-- [ ] Mobile application
-- [ ] API documentation and public API
-- [ ] Multi-language result translation
-- [ ] Advanced analytics dashboard
-
-## 🤝 Contributing
-
-This is a portfolio project, but feedback and suggestions are welcome! Please feel free to:
-- Open issues for bugs or feature requests
-- Submit pull requests for improvements
-- Share ideas for enhancements
-
-## 📝 License
-
-This project is available under the MIT License. See LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Built with inspiration from Japanese aesthetic principles
-- Semantic search powered by OpenAI's embedding models
-- Vector database capabilities provided by Pinecone
-- UI design inspired by scholarly and peaceful themes
 
 ---
 
