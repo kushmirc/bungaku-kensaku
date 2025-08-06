@@ -131,6 +131,4 @@ src/main/resources/
 - **Contextual Learning**: Understanding passages within their broader narrative context
 
 
----
 
-*This project demonstrates full-stack development, AI integration, vector database implementation, and thoughtful UX design for complex search applications.*
